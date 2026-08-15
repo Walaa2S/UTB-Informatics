@@ -1,0 +1,92 @@
+[
+  { "code": "MATH500", "title": "Remedial Mathematics", "credits": 0, "year": 0, "semester": 0, "prerequisites": [], "category": "foundation" },
+  { "code": "ENGL500", "title": "English Foundation Course", "credits": 0, "year": 0, "semester": 0, "prerequisites": [], "category": "foundation" },
+
+  { "code": "ARAB600", "title": "Arabic Language", "credits": 3, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "CHEM611", "title": "General Chemistry", "credits": 3, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "IENF611", "title": "Introduction to Computing", "credits": 3, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "ENGL611", "title": "English Communication Skills 1", "credits": 3, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "EUTH500", "title": "Euthenics", "credits": 0, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "MATH631", "title": "Calculus 1", "credits": 5, "year": 1, "semester": 1, "prerequisites": [], "category": "core" },
+
+  { "code": "IENF621", "title": "Computer Programming", "credits": 3, "year": 1, "semester": 2, "prerequisites": ["IENF611"], "category": "core" },
+  { "code": "ENGL621", "title": "English Communication Skills 2", "credits": 3, "year": 1, "semester": 2, "prerequisites": ["ENGL611"], "category": "core" },
+  { "code": "HIST600", "title": "History of Bahrain and GCC Region", "credits": 3, "year": 1, "semester": 2, "prerequisites": [], "category": "core" },
+  { "code": "MATH711", "title": "Calculus 2", "credits": 5, "year": 1, "semester": 2, "prerequisites": ["MATH631"], "category": "core" },
+  { "code": "HUMR600", "title": "Human Rights", "credits": 3, "year": 1, "semester": 2, "prerequisites": [], "category": "core" },
+
+  { "code": "IENF631", "title": "Advanced Programming", "credits": 3, "year": 1, "semester": 3, "prerequisites": ["IENF621"], "category": "core" },
+  { "code": "ENGL631", "title": "Speech and Oral Communication", "credits": 3, "year": 1, "semester": 3, "prerequisites": ["ENGL621"], "category": "core" },
+  { "code": "SCIE631", "title": "Biology", "credits": 3, "year": 1, "semester": 3, "prerequisites": [], "category": "core" },
+  { "code": "MATH621", "title": "Probability and Statistics", "credits": 3, "year": 1, "semester": 3, "prerequisites": [], "category": "core" },
+  { "code": "PHYS631", "title": "University Physics 1", "credits": 3, "year": 1, "semester": 3, "prerequisites": ["MATH631"], "category": "core" },
+  { "code": "ENVS711", "title": "Environmental Science", "credits": 3, "year": 1, "semester": 3, "prerequisites": [], "category": "core" },
+
+  { "code": "IENF711", "title": "Data Structures and Algorithm", "credits": 3, "year": 2, "semester": 1, "prerequisites": ["IENF631"], "category": "core", "tracks": ["developer", "ai"] },
+  { "code": "ENGL711", "title": "Technical Writing", "credits": 3, "year": 2, "semester": 1, "prerequisites": ["ENGL621"], "category": "core" },
+  { "code": "ENGG711", "title": "Engineering Drawing", "credits": 3, "year": 2, "semester": 1, "prerequisites": [], "category": "core" },
+  { "code": "MATH722", "title": "Advanced Mathematics", "credits": 3, "year": 2, "semester": 1, "prerequisites": ["MATH711"], "category": "core" },
+  { "code": "MATH622", "title": "Discrete Mathematics", "credits": 3, "year": 2, "semester": 1, "prerequisites": ["MATH631"], "category": "core" },
+  { "code": "PHYS711", "title": "University Physics 2", "credits": 3, "year": 2, "semester": 1, "prerequisites": ["PHYS631", "MATH711"], "category": "core" },
+
+  { "code": "ENGG721", "title": "Electric Circuit Theory 1", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["PHYS711"], "category": "core" },
+  { "code": "IENF721", "title": "Principles of Communications", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["PHYS631"], "category": "core", "tracks": ["network"] },
+  { "code": "IENF722", "title": "Database Systems", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["IENF711"], "category": "core", "tracks": ["developer"] },
+  { "code": "IENF723", "title": "Introduction to Data Science", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["IENF711"], "category": "core", "tracks": ["ai"] },
+  { "code": "MATH731", "title": "Multivariate Calculus", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["MATH711"], "category": "core" },
+  { "code": "PHYS722", "title": "University Physics 3", "credits": 3, "year": 2, "semester": 2, "prerequisites": ["PHYS711"], "category": "core" },
+
+  { "code": "ENGG734", "title": "Signals and Systems", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["ENGG721"], "category": "core" },
+  { "code": "ENGG733", "title": "Engineering Economy", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["MATH621"], "category": "core" },
+  { "code": "ENGG731", "title": "Electronics 1", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["ENGG721"], "category": "core" },
+  { "code": "ENGG732", "title": "Electric Circuit Theory 2", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["ENGG721"], "category": "core" },
+  { "code": "MATH732", "title": "Numerical Methods and Analysis", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["MATH722"], "category": "core" },
+  { "code": "MATH733", "title": "Linear Algebra", "credits": 3, "year": 2, "semester": 3, "prerequisites": ["MATH731"], "category": "core" },
+
+  { "code": "ENGG813", "title": "Digital Logic Design", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["ENGG731"], "category": "core" },
+  { "code": "IENF811", "title": "Computer Networks 1", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["IENF721"], "category": "core", "tracks": ["network"] },
+  { "code": "ENGG812", "title": "Electronics 2", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["ENGG731"], "category": "core" },
+  { "code": "IENF812", "title": "Artificial Intelligence", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["IENF723"], "category": "core", "tracks": ["ai"] },
+  { "code": "ENGG811", "title": "Electromagnetics", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["ENGG732"], "category": "core" },
+  { "code": "MATH821", "title": "Optimization Methods", "credits": 3, "year": 3, "semester": 1, "prerequisites": ["MATH732"], "category": "core" },
+
+  { "code": "IENF821", "title": "Computer Networks 2", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["IENF811"], "category": "core", "tracks": ["network"] },
+  { "code": "IENF822", "title": "Advanced Digital Logic Design", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["ENGG813"], "category": "core" },
+  { "code": "IENF823", "title": "Computer Organization and Architecture", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["ENGG813"], "category": "core" },
+  { "code": "IENF824", "title": "Power Electronics", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["ENGG812"], "category": "core" },
+  { "code": "ENGG821", "title": "Control Systems", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["ENGG734"], "category": "core" },
+  { "code": "ENGG831", "title": "Engineering and Project Management", "credits": 3, "year": 3, "semester": 2, "prerequisites": ["ENGG733"], "category": "core" },
+
+  { "code": "IENF831", "title": "Computer Networks 3", "credits": 3, "year": 3, "semester": 3, "prerequisites": ["IENF821"], "category": "core", "tracks": ["network"] },
+  { "code": "IENF832", "title": "Operating System", "credits": 3, "year": 3, "semester": 3, "prerequisites": ["IENF722"], "category": "core", "tracks": ["developer"] },
+  { "code": "IENF833", "title": "Machine Vision", "credits": 3, "year": 3, "semester": 3, "prerequisites": ["IENF812"], "category": "core", "tracks": ["ai"] },
+  { "code": "IENF834", "title": "Systems Analysis and Design", "credits": 3, "year": 3, "semester": 3, "prerequisites": ["IENF722"], "category": "core", "tracks": ["developer"] },
+  { "code": "IENF835", "title": "Cloud Computing", "credits": 3, "year": 3, "semester": 3, "prerequisites": ["IENF821"], "category": "core", "tracks": ["cloud"] },
+  { "code": "ENGG842", "title": "Safety Engineering", "credits": 2, "year": 3, "semester": 3, "prerequisites": ["IENF824"], "category": "core" },
+
+  { "code": "IENF841", "title": "Digital Systems Design using HDL", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["IENF822"], "category": "core" },
+  { "code": "IENF842", "title": "Wireless Communication Systems", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["IENF821"], "category": "core", "tracks": ["network"] },
+  { "code": "ENGG841", "title": "Technopreneurship", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["ENGG831"], "category": "core" },
+  { "code": "IENF843", "title": "Enterprise Networking", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["IENF821"], "category": "core", "tracks": ["network", "cloud"] },
+  { "code": "IENF844", "title": "Microcontroller and Embedded Systems", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["IENF823"], "category": "core" },
+  { "code": "ENGG851", "title": "Professional Ethics and Engineering Laws", "credits": 3, "year": 4, "semester": 1, "prerequisites": ["ENGG831"], "category": "core" },
+
+  { "code": "IENF851", "title": "Software Engineering", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF832"], "category": "core", "tracks": ["developer"] },
+  { "code": "IENF856", "title": "Robot Kinematics, Dynamics and Control", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["ENGG821"], "category": "core" },
+  { "code": "IENF855", "title": "Informatics Engineering Design Project A", "credits": 3, "year": 4, "semester": 2, "prerequisites": [], "prerequisiteCredits": 162, "category": "core" },
+
+  { "code": "IENF861", "title": "Industrial Attachment", "credits": 6, "year": 4, "semester": 3, "prerequisites": ["IENF844"], "category": "core" },
+  { "code": "IENF862", "title": "Informatics Engineering Design Project B", "credits": 3, "year": 4, "semester": 3, "prerequisites": ["IENF855"], "category": "core" },
+
+  { "code": "IENF852A", "title": "Cryptographic Systems", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF821"], "category": "elective", "electiveGroup": "Major Elective 1", "tracks": ["security"] },
+  { "code": "IENF852B", "title": "Network Security", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF821"], "category": "elective", "electiveGroup": "Major Elective 1", "tracks": ["security", "network"] },
+  { "code": "IENF852C", "title": "Ethical Hacking", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF821"], "category": "elective", "electiveGroup": "Major Elective 1", "tracks": ["security"] },
+
+  { "code": "IENF853A", "title": "Microprocessor Systems", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF832"], "category": "elective", "electiveGroup": "Major Elective 2" },
+  { "code": "IENF853B", "title": "Data Mining", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF832"], "category": "elective", "electiveGroup": "Major Elective 2", "tracks": ["ai"] },
+  { "code": "IENF853C", "title": "Parallel and Distributed Computing", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["IENF832"], "category": "elective", "electiveGroup": "Major Elective 2", "tracks": ["cloud"] },
+
+  { "code": "IENF854A", "title": "Special Topics in Computer Engineering", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["ENGG821"], "category": "elective", "electiveGroup": "Major Elective 3" },
+  { "code": "IENF854B", "title": "Digital Control Systems", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["ENGG821"], "category": "elective", "electiveGroup": "Major Elective 3" },
+  { "code": "IENF854C", "title": "Industrial Control Systems Design", "credits": 3, "year": 4, "semester": 2, "prerequisites": ["ENGG821"], "category": "elective", "electiveGroup": "Major Elective 3" }
+]

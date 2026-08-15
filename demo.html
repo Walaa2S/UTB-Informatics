@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Informatics Engineering · UTB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#05070a;
+    --bg-panel:#0a0e14;
+    --blue:#33b1ff;
+    --blue-dim:#1a5c82;
+    --emerald:#1fe0a8;
+    --emerald-dim:#0e7a5c;
+    --orange:#ff8a3d;
+    --orange-dim:#8a4a1f;
+    --ink:#e9edf3;
+    --ink-dim:#8b96a5;
+    --line:rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--bg-void); color:var(--ink); font-family:'Inter',sans-serif; overflow-x:hidden;}
+  body{
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(51,177,255,0.08), transparent 40%),
+      radial-gradient(circle at 85% 30%, rgba(31,224,168,0.06), transparent 45%);
+  }
+
+  .noise{position:fixed; inset:0; pointer-events:none; opacity:0.015; z-index:50; filter:blur(1.2px);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:40;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 5%;
+    backdrop-filter:blur(10px);
+    background:linear-gradient(to bottom, rgba(5,7,10,0.85), transparent);
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; letter-spacing:0.02em;}
+  .brand-mark{width:9px; height:9px; background:var(--emerald); border-radius:2px; box-shadow:0 0 12px var(--emerald);}
+  .navlinks{display:flex; gap:34px; font-size:13px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace;}
+  .navlinks span{cursor:pointer; transition:color .2s;}
+  .navlinks span:hover{color:var(--ink);}
+
+  .hero{
+    position:relative; min-height:100vh; display:flex; flex-direction:column;
+    justify-content:center; padding:120px 5% 60px;
+  }
+  #canvas-wrap{position:absolute; inset:0; z-index:1;}
+  #canvas-wrap canvas{display:block; width:100%; height:100%;}
+
+  .hero-content{position:relative; z-index:5; max-width:760px; pointer-events:none;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--emerald);
+    letter-spacing:0.12em; text-transform:uppercase; margin-bottom:22px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:''; width:22px; height:1px; background:var(--emerald);}
+
+  h1{
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(40px, 6vw, 74px); line-height:1.04; letter-spacing:-0.02em;
+    background:linear-gradient(100deg, #fff 20%, var(--blue) 65%, var(--emerald) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:22px;
+  }
+  .subtitle{
+    font-size:17px; line-height:1.7; color:var(--ink-dim); max-width:600px; margin-bottom:36px;
+  }
+  .cta-row{display:flex; gap:16px; pointer-events:auto;}
+  .btn{
+    font-family:'JetBrains Mono',monospace; font-size:13px; padding:13px 26px;
+    border-radius:3px; cursor:pointer; transition:all .2s; letter-spacing:0.02em;
+  }
+  .btn-primary{
+    background:var(--emerald); color:#04231a; font-weight:600; border:none;
+    box-shadow:0 0 0 0 rgba(31,224,168,0.5);
+  }
+  .btn-primary:hover{box-shadow:0 0 24px 2px rgba(31,224,168,0.45); transform:translateY(-1px);}
+  .btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--blue-dim); color:var(--blue);}
+
+  .stat-strip{
+    position:relative; z-index:5; display:flex; gap:48px; margin-top:64px; pointer-events:none;
+  }
+  .stat b{display:block; font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:600; color:var(--ink);}
+  .stat span{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.08em;}
+
+  .scroll-hint{
+    position:absolute; bottom:36px; left:5%; z-index:5; font-family:'JetBrains Mono',monospace;
+    font-size:11px; color:var(--ink-dim); display:flex; align-items:center; gap:8px;
+  }
+  .scroll-hint .bar{width:1px; height:26px; background:linear-gradient(var(--emerald), transparent); animation:pulse-bar 1.8s infinite;}
+  @keyframes pulse-bar{0%,100%{opacity:0.3;} 50%{opacity:1;}}
+
+  section{padding:100px 5%; position:relative; border-top:1px solid var(--line);}
+  .section-label{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--orange);
+    letter-spacing:0.12em; text-transform:uppercase; margin-bottom:16px;
+  }
+  h2{font-family:'Space Grotesk',sans-serif; font-size:clamp(26px,3vw,38px); font-weight:600; margin-bottom:18px; letter-spacing:-0.01em;}
+  .lead{color:var(--ink-dim); font-size:16px; line-height:1.75; max-width:680px;}
+
+  .vm-grid{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:48px;}
+  .vm-card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:6px; padding:32px;
+    position:relative; overflow:hidden; transition:border-color .25s, transform .25s;
+  }
+  .vm-card:hover{border-color:var(--blue-dim); transform:translateY(-3px);}
+  .vm-card::before{
+    content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+  }
+  .vm-card.vision::before{background:var(--blue);}
+  .vm-card.mission::before{background:var(--emerald);}
+  .vm-card h3{font-family:'Space Grotesk',sans-serif; font-size:19px; margin-bottom:12px; font-weight:600;}
+  .vm-card p{color:var(--ink-dim); font-size:14.5px; line-height:1.75;}
+
+  .badges{display:flex; flex-wrap:wrap; gap:12px; margin-top:44px;}
+  .badge{
+    font-family:'JetBrains Mono',monospace; font-size:13px; padding:11px 20px;
+    border:1px solid var(--line); border-radius:20px; cursor:pointer; color:var(--ink-dim);
+    transition:all .2s; user-select:none;
+  }
+  .badge:hover{border-color:var(--emerald-dim); color:var(--emerald);}
+  .badge.active{background:rgba(31,224,168,0.1); border-color:var(--emerald); color:var(--emerald);}
+
+  .track-panel{
+    margin-top:28px; padding:22px 26px; background:var(--bg-panel); border:1px solid var(--line);
+    border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--ink-dim);
+    min-height:20px; transition:all .2s;
+  }
+  .track-panel b{color:var(--emerald);}
+
+  footer{padding:40px 5%; border-top:1px solid var(--line); font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-dim); display:flex; justify-content:space-between;}
+
+  @media(max-width:768px){
+    .vm-grid{grid-template-columns:1fr;}
+    .stat-strip{flex-wrap:wrap; gap:28px;}
+    .navlinks{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<nav>
+  <div class="brand"><div class="brand-mark"></div>INFORMATICS ENGINEERING · UTB</div>
+  <div class="navlinks"><span>Program</span><span>Skills tree</span><span>Clubs</span><span>Projects</span><span>Advisor</span></div>
+</nav>
+
+<section class="hero">
+  <div id="canvas-wrap"></div>
+  <div class="hero-content">
+    <div class="eyebrow">B.Eng · Four-year accredited program</div>
+    <h1>Informatics<br>Engineering</h1>
+    <p class="subtitle">The Bachelor of Engineering in Informatics Engineering equips graduates with a solid foundation in computing, networking, software development, and intelligent systems — built through lab work, industry projects, internships, and student-led Cisco and Huawei clubs.</p>
+    <div class="cta-row">
+      <button class="btn btn-primary">View curriculum tree ↗</button>
+      <button class="btn btn-ghost">Talk to the AI advisor</button>
+    </div>
+  </div>
+  <div class="stat-strip">
+    <div class="stat"><b>4</b><span>years, accredited</span></div>
+    <div class="stat"><b>3</b><span>Cisco / Huawei tracks</span></div>
+    <div class="stat"><b>12+</b><span>ICT lab benches</span></div>
+  </div>
+  <div class="scroll-hint"><div class="bar"></div>scroll</div>
+</section>
+
+<section>
+  <div class="section-label">Vision · Mission</div>
+  <h2>Built for engineers who ship</h2>
+  <p class="lead">Every module in the program maps to a real capability — network design, systems programming, applied AI — verified through lab benches and industry-recognized certification, not lecture alone.</p>
+  <div class="vm-grid">
+    <div class="vm-card vision">
+      <h3>Vision</h3>
+      <p>To be Bahrain's leading source of informatics engineers who move fluidly between infrastructure, software, and intelligent systems — trusted by regional employers from day one.</p>
+    </div>
+    <div class="vm-card mission">
+      <h3>Mission</h3>
+      <p>Pair rigorous theoretical grounding with hands-on lab work, Cisco/Huawei academy certification, and capstone projects graded against industry standards, not just academic ones.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-label">Career paths</div>
+  <h2>Pick a track, watch the tree react</h2>
+  <p class="lead">Each badge highlights the matching specialization on the curriculum tree — this is a live preview of that interaction.</p>
+  <div class="badges" id="badges">
+    <div class="badge active" data-track="cloud">Cloud Solutions Architect</div>
+    <div class="badge" data-track="net">Network Engineer</div>
+    <div class="badge" data-track="sec">Cybersecurity Analyst</div>
+    <div class="badge" data-track="ai">AI / ML Engineer</div>
+    <div class="badge" data-track="dev">Software Developer</div>
+  </div>
+  <div class="track-panel" id="track-panel"></div>
+</section>
+
+<footer>
+  <span>Informatics Engineering Dept · UTB</span>
+  <span>Preview build — 3D hero demo</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---------- 3D Holographic Neural Mesh ----------
+const wrap = document.getElementById('canvas-wrap');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+camera.position.set(0, 0, 15);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+wrap.appendChild(renderer.domElement);
+
+const group = new THREE.Group();
+scene.add(group);
+
+// layered node topology: 3 layers like a neural net / server rack
+const layerCounts = [5, 8, 5];
+const layerX = [-5.5, 0, 5.5];
+const colors = [0x33b1ff, 0x1fe0a8, 0xff8a3d];
+const nodes = [];
+const nodeMeshes = [];
+
+layerCounts.forEach((count, li) => {
+  const layerNodes = [];
+  for (let i = 0; i < count; i++) {
+    const y = (i - (count - 1) / 2) * 1.5;
+    const z = (Math.random() - 0.5) * 2.5;
+    const pos = new THREE.Vector3(layerX[li] + (Math.random()-0.5)*0.6, y, z);
+    layerNodes.push(pos);
+
+    const geo = new THREE.SphereGeometry(0.12 + Math.random()*0.05, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: colors[li] });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos);
+    group.add(mesh);
+    nodeMeshes.push(mesh);
+
+    // glow halo via sprite-like extra sphere
+    const haloGeo = new THREE.SphereGeometry(0.28 + Math.random()*0.06, 12, 12);
+    const haloMat = new THREE.MeshBasicMaterial({ color: colors[li], transparent: true, opacity: 0.12 });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.position.copy(pos);
+    group.add(halo);
+  }
+  nodes.push(layerNodes);
+});
+
+// connectors between adjacent layers
+const lineMaterialA = new THREE.LineBasicMaterial({ color: 0x33b1ff, transparent: true, opacity: 0.18 });
+const lineMaterialB = new THREE.LineBasicMaterial({ color: 0x1fe0a8, transparent: true, opacity: 0.18 });
+const connectorLines = [];
+
+function connectLayers(a, b, mat) {
+  a.forEach(pa => {
+    b.forEach(pb => {
+      if (Math.random() > 0.55) {
+        const geo = new THREE.BufferGeometry().setFromPoints([pa, pb]);
+        const line = new THREE.Line(geo, mat);
+        group.add(line);
+        connectorLines.push(line);
+      }
+    });
+  });
+}
+connectLayers(nodes[0], nodes[1], lineMaterialA);
+connectLayers(nodes[1], nodes[2], lineMaterialB);
+
+// outer wireframe icosahedron shell for structure
+const shellGeo = new THREE.IcosahedronGeometry(7.5, 1);
+const shellMat = new THREE.MeshBasicMaterial({ color: 0x1a5c82, wireframe: true, transparent: true, opacity: 0.07 });
+const shell = new THREE.Mesh(shellGeo, shellMat);
+group.add(shell);
+
+// pulse particles traveling along a few connectors
+const pulses = [];
+for (let i = 0; i < 14; i++) {
+  const line = connectorLines[Math.floor(Math.random() * connectorLines.length)];
+  if (!line) continue;
+  const pos = line.geometry.attributes.position;
+  const start = new THREE.Vector3(pos.getX(0), pos.getY(0), pos.getZ(0));
+  const end = new THREE.Vector3(pos.getX(1), pos.getY(1), pos.getZ(1));
+  const geo = new THREE.SphereGeometry(0.05, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+  pulses.push({ mesh, start, end, t: Math.random(), speed: 0.004 + Math.random()*0.006 });
+}
+
+// mouse tracking -> warp / rotate
+let mouseX = 0, mouseY = 0, targetRotX = 0, targetRotY = 0;
+window.addEventListener('mousemove', (e) => {
+  mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  targetRotY += (mouseX * 0.5 - targetRotY) * 0.04;
+  targetRotX += (-mouseY * 0.3 - targetRotX) * 0.04;
+  group.rotation.y = targetRotY + performance.now() * 0.00006;
+  group.rotation.x = targetRotX;
+
+  shell.rotation.y -= 0.0009;
+  shell.rotation.x += 0.0004;
+
+  const t = performance.now() * 0.002;
+  nodeMeshes.forEach((m, i) => {
+    m.position.y += Math.sin(t + i) * 0.0015;
+    const s = 1 + Math.sin(t * 2 + i) * 0.15;
+    m.scale.set(s, s, s);
+  });
+
+  pulses.forEach(p => {
+    p.t += p.speed;
+    if (p.t > 1) p.t = 0;
+    p.mesh.position.lerpVectors(p.start, p.end, p.t);
+  });
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = wrap.clientWidth / wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+});
+
+// ---------- Career badge -> track panel interaction ----------
+const trackData = {
+  cloud: 'Highlighted nodes → Cloud Infrastructure, Distributed Systems, DevOps Pipelines, Huawei Cloud Track.',
+  net: 'Highlighted nodes → Routing & Switching, Network Security, Cisco CCNA Track, Wireless Systems.',
+  sec: 'Highlighted nodes → Cybersecurity Fundamentals, Ethical Hacking, Cisco Security Track, Cryptography.',
+  ai: 'Highlighted nodes → Machine Learning, Data Structures, Applied AI Lab, Huawei AI Track.',
+  dev: 'Highlighted nodes → Software Engineering, Web Systems, Mobile Development, Capstone Studio.'
+};
+const badgeEls = document.querySelectorAll('.badge');
+const panel = document.getElementById('track-panel');
+function setTrack(key) {
+  badgeEls.forEach(b => b.classList.toggle('active', b.dataset.track === key));
+  panel.innerHTML = trackData[key];
+}
+badgeEls.forEach(b => b.addEventListener('click', () => setTrack(b.dataset.track)));
+setTrack('cloud');
+</script>
+</body>
+</html>

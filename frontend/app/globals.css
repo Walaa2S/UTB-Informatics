@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+/* تأثير الدوائر والمدارات المتراصة حول الروبوت */
+.orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(56, 189, 248, 0.15);
+  top: 50%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.orbit-1 {
+  width: 450px;
+  height: 450px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.05);
+  animation: spinSlow 30s linear infinite;
+}
+
+.orbit-2 {
+  width: 620px;
+  height: 620px;
+  border: 1px dashed rgba(34, 211, 238, 0.25);
+  animation: spinReverse 45s linear infinite;
+}
+
+.orbit-3 {
+  width: 780px;
+  height: 780px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+@keyframes spinSlow {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  0% { transform: translate(-50%, -50%) rotate(360deg); }
+  100% { transform: translate(-50%, -50%) rotate(0deg); }
+}
