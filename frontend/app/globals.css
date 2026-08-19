@@ -10,7 +10,26 @@ html {
 
 body {
   font-family: 'Inter', sans-serif;
+  background-color: #07100f;
+  color: #eefdf7;
 }
+
+/* تخصيص شريط التمرير (Scrollbar) ليتناسب مع الثيم السيبراني */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(5, 14, 13, 0.9);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(141, 255, 202, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(141, 255, 202, 0.4);
+}
+
 /* تأثير الدوائر والمدارات المتراصة حول الروبوت */
 .orbit {
   position: absolute;
@@ -51,4 +70,101 @@ body {
 @keyframes spinReverse {
   0% { transform: translate(-50%, -50%) rotate(360deg); }
   100% { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+/* تأثيرات التوهج والنصوص السيبرانية */
+.cyber-glow {
+  text-shadow: 0 0 10px rgba(141, 255, 202, 0.4);
+}
+
+.cyber-box-glow {
+  box-shadow: 0 0 20px rgba(141, 255, 202, 0.08);
+}
+
+/* تنسيقات بطاقة الرادار السيبراني للحالات الفارغة (Empty States) */
+.radar-card-container {
+  position: relative;
+  grid-column: 1 / -1;
+  border: 1px solid rgba(141, 255, 202, 0.3);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(12, 28, 26, 0.85), rgba(6, 16, 15, 0.95));
+  padding: 40px 24px;
+  text-align: center;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  margin: 20px 0;
+  backdrop-filter: blur(12px);
+}
+
+.radar-sweep-effect {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(141, 255, 202, 0.07) 0%, transparent 65%);
+  animation: radarPulse 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes radarPulse {
+  0% { transform: scale(0.85); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 0.7; }
+  100% { transform: scale(0.85); opacity: 0.3; }
+}
+
+.radar-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-tag {
+  font-size: 9px;
+  color: #8dffca;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  margin-bottom: 12px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  background: rgba(141, 255, 202, 0.06);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(141, 255, 202, 0.15);
+}
+
+.radar-icon-box {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: rgba(141, 255, 202, 0.08);
+  border: 1px solid rgba(141, 255, 202, 0.15);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 20px rgba(141, 255, 202, 0.1);
+}
+
+.radar-title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #eefdf7;
+  letter-spacing: -0.02em;
+}
+
+.radar-text {
+  font-size: 11px;
+  color: #8ca9a1;
+  max-width: 380px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.radar-btn {
+  min-height: 40px;
+  padding: 0 22px;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  font-family: "SFMono-Regular", Consolas, monospace;
 }

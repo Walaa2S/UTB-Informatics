@@ -110,7 +110,7 @@ export default function SkillsTree() {
         .then(async ({ user }) => {
           if (user && user.email) {
             try {
-              const res = await fetch(`http://localhost:4000/api/progress/${user.email}`);
+              const res = await fetch(`http://localhost:4002/api/progress/${user.email}`);
               const data = await res.json();
               if (data && data.passedCourses) {
                 const codes = data.passedCourses.map((pc) => (pc.course && pc.course.code ? pc.course.code : pc.code)).filter(Boolean);
@@ -179,7 +179,7 @@ export default function SkillsTree() {
               return { course: matchCourse ? matchCourse.id : cCode };
             });
 
-            await fetch('http://localhost:4000/api/progress/update-passed', {
+            await fetch('http://localhost:4002/api/progress/update-passed', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: userRes.user.email, passedCourses: formattedPassed }),
@@ -202,7 +202,7 @@ export default function SkillsTree() {
       try {
         const userRes = await api.me();
         if (userRes && userRes.user && userRes.user.email) {
-          await fetch('http://localhost:4000/api/progress/update-passed', {
+          await fetch('http://localhost:4002/api/progress/update-passed', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userRes.user.email, passedCourses: [] }),

@@ -1,31 +1,6 @@
 'use client';
-
 import { useEffect, useMemo, useState } from 'react';
-
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/$/, '');
-
-async function handleLocalLogin() {
-  try {
-    setAuthBusy(true);
-
-    const result = await api.login(utbEmail, password);
-
-    localStorage.setItem('utb_token', result.token);
-    localStorage.setItem('utb_user', JSON.stringify(result.user));
-
-    window.location.href =
-      result.user.role === 'faculty'
-        ? '/instructor'
-        : '/dashboard';
-
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    setAuthBusy(false);
-  }
-}
-
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api').replace(/\/$/, '');
 async function apiFetch(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -72,13 +47,25 @@ function Difficulty({ level = 0 }) {
   );
 }
 
-function EmptyState({ icon = '⌘', title, text, action }) {
+function EmptyState({ icon = '⚡', title, text, action }) {
+  const [pinged, setPinged] = useState(false);
   return (
-    <div className="empty-state">
-      <div className="empty-icon">{icon}</div>
-      <h3>{title}</h3>
-      <p>{text}</p>
-      {action}
+    <div className="radar-card-container">
+      <div className="radar-sweep-effect"></div>
+      <div className="radar-content">
+        <div className="radar-tag">[!] RADAR ACTIVE: SCANNING INSTRUCTOR NODES</div>
+        <div className="radar-icon-box">{icon}</div>
+        <h3 className="radar-title">{title}</h3>
+        <p className="radar-text">{text}</p>
+        {action || (
+          <button 
+            className="btn btn-primary radar-btn" 
+            onClick={() => setPinged(true)}
+          >
+            {pinged ? 'NODE PINGED ✓' : '[ PING INSTRUCTOR NODE ]'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -105,9 +92,13 @@ export default function StudentCommunityPage() {
     'Type "help" to view available commands.',
   ]);
 
-  const [password, setPassword] = useState('');
   const [utbEmail, setUtbEmail] = useState('');
+  const [studentId, setStudentId] = useState(''); // الرقم التعريفي للطالب
   const [authBusy, setAuthBusy] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpResendSeconds, setOtpResendSeconds] = useState(0);
+  const [otpMessage, setOtpMessage] = useState('');
+  const [otpError, setOtpError] = useState('');
 
   const [community, setCommunity] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +106,6 @@ export default function StudentCommunityPage() {
   const [authModal, setAuthModal] = useState(false);
   const [authStep, setAuthStep] = useState(1);
   const [authRole, setAuthRole] = useState(null);
-  const [studentId, setStudentId] = useState('');
   const [selectedChallenge, setSelectedChallenge] = useState(null);
   const [challengeFilter, setChallengeFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -149,6 +139,7 @@ export default function StudentCommunityPage() {
   const levelProgress = nextLevelXP > currentLevelXP
     ? Math.round(((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
     : 0;
+  
   const navItems = [
     { id: 'dashboard', icon: '⌂', label: 'Dashboard' },
     { id: 'challenges', icon: '⚡', label: 'Challenges', count: challenges.length || null },
@@ -160,6 +151,11 @@ export default function StudentCommunityPage() {
     { id: 'events', icon: '◈', label: 'Events' },
     { id: 'resources', icon: '▣', label: 'Resources' },
   ];
+
+  // Mobile navigation keeps the five most-used student destinations visible.
+  const mobileNavItems = navItems.filter((item) =>
+    ['dashboard', 'challenges', 'tasks', 'leaderboard', 'resources'].includes(item.id)
+  );
 
   const filteredChallenges = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -189,29 +185,51 @@ export default function StudentCommunityPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function loadCommunity() {
+async function loadCommunity() {
     setLoading(true);
     try {
-      const data = await apiFetch('/community');
-      setCommunity(data);
-      const currentUser = data?.user;
-      if (currentUser && ['faculty', 'admin'].includes(String(currentUser.role).toLowerCase())) {
+      const localUser = localStorage.getItem('utb_user');
+      
+      // جلب بيانات المجتمع والتحديات المباشرة بشكل متزامن
+      const [data, challengesData] = await Promise.all([
+        apiFetch('/community').catch(() => ({})),
+        apiFetch('/challenges').catch(() => [])
+      ]);
+
+      const parsedUser = localUser ? JSON.parse(localUser) : data?.user;
+
+      setCommunity({ 
+        ...(data || {}), 
+        user: parsedUser,
+        challenges: Array.isArray(challengesData) ? challengesData : (data?.challenges || [])
+      });
+
+      const currentUser = parsedUser || data?.user;
+      if (currentUser && ['faculty', 'admin', 'instructor'].includes(String(currentUser.role).toLowerCase())) {
         window.location.replace('/instructor');
         return;
       }
+
       setTerminalLines([
         'BSIE Community Terminal v2.0.0',
         currentUser ? `Connected as ${currentUser.username || currentUser.email}` : 'Session: guest',
         'Type "help" to view available commands.',
       ]);
     } catch (error) {
-      setCommunity({ user: null, challenges: [], tasks: [], teams: [], projects: [], ideas: [], leaderboard: [], events: [], resources: [], badges: [], notifications: [], activity: [], deadlines: [], stats: {} });
+      const localUser = localStorage.getItem('utb_user');
+      const challengesData = await apiFetch('/challenges').catch(() => []);
+      
+      setCommunity({ 
+        user: localUser ? JSON.parse(localUser) : null, 
+        challenges: challengesData, 
+        tasks: [], teams: [], projects: [], ideas: [], leaderboard: [], events: [], resources: [], badges: [], notifications: [], activity: [], deadlines: [], stats: {} 
+      });
+      
       setTerminalLines([
         'BSIE Community Terminal v2.0.0',
-        'Backend connection unavailable.',
+        localUser ? 'Developer session active.' : 'Backend connection unavailable.',
         'Type "help" for local commands.',
       ]);
-      showToast('Community API is not reachable. Check the backend URL.');
     } finally {
       setLoading(false);
     }
@@ -224,35 +242,67 @@ export default function StudentCommunityPage() {
       .finally(() => setAuthLoading(false));
   }, []);
 
-  async function mutate(path, method = 'POST', body) {
+  // Refresh published instructor content every 30s while the page is visible.
+  useEffect(() => {
+    const refreshCommunity = () => {
+      if (document.visibilityState === 'visible') loadCommunity();
+    };
+
+    const interval = window.setInterval(refreshCommunity, 30000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshCommunity();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (otpResendSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setOtpResendSeconds((seconds) => (seconds > 0 ? seconds - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [otpResendSeconds]);
+
+async function mutate(path, method = 'POST', body) {
     setActionLoading(true);
     try {
-      await apiFetch(path, {
+      const response = await apiFetch(path, {
         method,
         body: body ? JSON.stringify(body) : undefined,
       });
       await loadCommunity();
       showToast('Action completed successfully.');
+      return response;
     } catch (error) {
       if (error.status === 401) {
         openAuthModal();
-        showToast('Please sign in with your UTB account first.');
+        showToast('Please sign in first to continue.');
       } else if (error.status === 403) {
         showToast('You do not have permission for this action.');
+      } else if (error.status === 429) {
+        showToast('Too many requests. Please wait a moment and try again.');
       } else {
         showToast(error.message || 'Action failed.');
       }
+      throw error;
     } finally {
       setActionLoading(false);
     }
   }
 
-  function acceptChallenge(challenge) {
+function acceptChallenge(challenge) {
     if (!user) {
       openAuthModal();
       return;
     }
-    mutate(`/community/challenges/${challenge.id}/accept`);
+    const challengeId = challenge.id || challenge._id;
+    if (!challengeId) return;
+    mutate(`/challenges/${challengeId}/accept`);
   }
 
   function completeTask(task) {
@@ -303,8 +353,11 @@ export default function StudentCommunityPage() {
   function openAuthModal() {
     setAuthStep(1);
     setAuthRole(null);
-    setStudentId('');
     setUtbEmail('');
+    setOtpCode('');
+    setOtpResendSeconds(0);
+    setOtpMessage('');
+    setOtpError('');
     setAuthBusy(false);
     setAuthModal(true);
   }
@@ -316,65 +369,122 @@ export default function StudentCommunityPage() {
 
   function selectAuthRole(nextRole) {
     setAuthRole(nextRole);
-    setAuthStep(2);
-    setStudentId('');
     setUtbEmail('');
+    setOtpCode('');
+    setOtpMessage('');
+    setOtpError('');
+    setOtpResendSeconds(0);
+    setAuthStep(2);
   }
 
-  function continueIdentityStep() {
-    if (authRole === 'student') {
-      const id = studentId.trim().toUpperCase();
-      if (!/^BH\d+$/.test(id)) {
-        showToast('Enter your student ID in the format BH + student number.');
-        return;
-      }
-      setStudentId(id);
-      setUtbEmail(`${id}@utb.edu.bh`);
-      setAuthStep(3);
-      return;
-    }
+function continueIdentityStep() {
+  if (authRole === 'guest') {
+    setAuthStep(2);
+    return;
+  }
 
-    if (authRole === 'instructor') {
-      const email = utbEmail.trim().toLowerCase();
-      if (!email.endsWith('@utb.edu.bh')) {
-        showToast('Use your official @UTB.EDU.BH faculty account.');
-        return;
-      }
-      setUtbEmail(email);
-      setAuthStep(3);
-      return;
-    }
+  const email = utbEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setOtpError('Please enter a valid email address.');
+    showToast('Please enter a valid email address.');
+    return;
+  }
 
+  if (!studentId.trim()) {
+    setOtpError('Please enter your Student ID.');
+    showToast('Please enter your Student ID.');
+    return;
+  }
+
+  setUtbEmail(email);
+  setOtpError('');
+  requestOtp(email);
+}
+
+function continueAsGuest() {
+  setAuthModal(false);
+  showToast('Guest session active. Sign in later to unlock student features.');
+}
+
+async function requestOtp(emailOverride = null) {
+  const email = String(emailOverride || utbEmail).trim().toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setOtpError('Please enter a valid email address.');
+    showToast('Please enter a valid email address.');
+    setAuthStep(2);
+    return;
+  }
+
+  setAuthBusy(true);
+  setOtpError('');
+  setOtpMessage('');
+
+  try {
+    const result = await apiFetch('/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, studentId }),
+    });
+
+    setUtbEmail(email);
+    setOtpCode('');
+    setOtpResendSeconds(60);
+    setOtpMessage(result?.message || `Verification code sent to ${email}`);
     setAuthStep(3);
+  } catch (error) {
+    setOtpError(error?.message || 'Unable to send verification code.');
+  } finally {
+    setAuthBusy(false);
   }
+}
 
-  function continueAsGuest() {
-    setAuthModal(false);
-    showToast('Guest session active. Sign in later to unlock student features.');
-  }
+  async function verifyOtp() {
+    const email = utbEmail.trim().toLowerCase();
+    const otp = otpCode.trim();
 
-  function startOutlookLogin() {
-    if (authRole === 'student') {
-      const id = studentId.trim().toUpperCase();
-      if (!/^BH\d+$/.test(id)) {
-        showToast('Enter a valid student ID first.');
-        setAuthStep(2);
-        return;
-      }
-    }
-
-    const email = (authRole === 'student' ? `${studentId.trim().toUpperCase()}@utb.edu.bh` : utbEmail.trim().toLowerCase());
-    if (!email.endsWith('@utb.edu.bh')) {
-      showToast('Use your official @UTB.EDU.BH university account.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setOtpError('Please enter a valid email address.');
       setAuthStep(2);
       return;
     }
 
+    if (!/^\d{6}$/.test(otp)) {
+      setOtpError('Enter the 6-digit verification code.');
+      return;
+    }
+
     setAuthBusy(true);
-    const returnTo = `${window.location.origin}/community`;
-    const query = new URLSearchParams({ returnTo, email, role: authRole || 'student' });
-    // The existing backend route is kept for compatibility; the UI names the provider Microsoft.
-    window.location.href = `${API_BASE}/auth/utb/outlook?${query.toString()}`;
+    setOtpError('');
+
+    try {
+      const result = await apiFetch('/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otpCode: otp }),
+      });
+
+      if (!result?.success || !result?.token || !result?.user) {
+        throw new Error(result?.message || 'Verification failed.');
+      }
+
+      localStorage.setItem('utb_token', result.token);
+      localStorage.setItem('utb_user', JSON.stringify(result.user));
+      setCommunity((current) => ({ ...(current || {}), user: result.user }));
+      
+      // إغلاق نافذة المصادقة وتحديث البيانات بدلاً من التوجيه لصفحة غير موجودة
+      setAuthModal(false);
+      await loadCommunity();
+      showToast('Successfully authenticated! Welcome to the workspace.');
+
+    } catch (error) {
+      setOtpError(error?.message || 'Invalid or expired verification code.');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function resendOtp() {
+    if (otpResendSeconds > 0 || authBusy) return;
+    requestOtp();
   }
 
   async function logout() {
@@ -387,85 +497,128 @@ export default function StudentCommunityPage() {
     }
   }
 
-  function runCommand(rawCommand) {
-    const command = rawCommand.trim().toLowerCase();
-    if (!command) return;
-    const output = [`> ${rawCommand}`];
+function runCommand(rawCommand) {
+  const command = rawCommand.trim().toLowerCase();
+  if (!command) return;
+  const output = [`> ${rawCommand}`];
 
-    if (command === 'help') {
-      output.push(
-        'Available commands:',
-        '  status           Show authenticated status',
-        '  profile          Show your profile',
-        '  challenges       Browse live challenges',
-        '  tasks            View your tasks',
-        '  teams            Find teams',
-        '  projects         Explore projects',
-        '  leaderboard      View ranking',
-        '  ideas            Community ideas',
-        '  events           Upcoming events',
-        '  badges           Your verified badges',
-        '  refresh          Reload live data',
-        '  role             Show access role',
-        '  clear            Clear terminal'
-      );
-    } else if (command === 'status') {
-      output.push(
-        `session: ${user ? 'authenticated' : 'guest'}`,
-        `role: ${user?.role || 'guest'}`,
-        `level: ${user?.level ?? '—'}`,
-        `xp: ${user?.xp ?? '—'}`,
-        `streak: ${user?.streak ?? '—'}`,
-        `rank: ${user?.rank ?? '—'}`
-      );
-    } else if (command === 'profile') {
-      if (!user) output.push('No authenticated profile. Sign in with UTB Outlook.');
-      else output.push(
-        `name: ${user.name || '—'}`,
-        `email: ${user.email || '—'}`,
-        `major: ${user.major || '—'}`,
-        `role: ${user.role || '—'}`
-      );
-    } else if (command === 'role') {
-      output.push(`access_role: ${user?.role || 'guest'}`);
-    } else if (command === 'challenges') {
-      output.push(...(challenges.length
-        ? challenges.slice(0, 8).map((item) => `#${item.id} ${item.title} +${item.reward || 0} XP`)
-        : ['No live challenges.']));
-    } else if (command === 'tasks') {
-      output.push(...(tasks.length
-        ? tasks.slice(0, 8).map((item) => `${item.status === 'Completed' ? '✓' : '○'} ${item.title}`)
-        : ['No tasks assigned.']));
-    } else if (command === 'teams') {
-      output.push(...(teams.length ? teams.slice(0, 8).map((team) => `${team.name} — ${team.members || 0}/${team.max || 0}`) : ['No teams available.']));
-    } else if (command === 'projects') {
-      output.push(...(projects.length ? projects.slice(0, 8).map((project) => project.title) : ['No projects published.']));
-    } else if (command === 'leaderboard') {
-      output.push(...(leaderboard.length ? leaderboard.slice(0, 8).map((person) => `${person.rank}. ${person.name} — ${person.xp} XP`) : ['Leaderboard is empty.']));
-    } else if (command === 'ideas') {
-      output.push(...(ideas.length ? ideas.slice(0, 8).map((idea) => `${idea.title} — ${idea.votes || 0} votes`) : ['No community ideas.']));
-    } else if (command === 'events') {
-      output.push(...(events.length ? events.slice(0, 8).map((event) => `${event.date || formatDate(event.startsAt)} — ${event.title}`) : ['No upcoming events.']));
-    } else if (command === 'badges') {
-      output.push(...(badges.length ? badges.slice(0, 8).map((badge) => `${badge.icon || '◇'} ${badge.name}`) : ['No verified badges yet.']));
-    } else if (command === 'refresh') {
-      loadCommunity();
-      output.push('Refreshing live community data...');
-    } else if (command === 'clear') {
-      setTerminalLines([]);
-      setTerminalInput('');
-      return;
-    } else {
-      output.push(`command not found: ${rawCommand}`, 'Type "help" for available commands.');
-    }
-
+  if (command === 'help') {
+    output.push(
+      'Available commands:',
+      '  student            Open student registration modal',
+      '  dev on             Activate instructor mode & open Instructor Console',
+      '  dev off            Reset session to guest mode',
+      '  status             Show authenticated status',
+      '  profile            Show your profile',
+      '  challenges         Browse live challenges',
+      '  tasks              View your tasks',
+      '  teams              Find teams',
+      '  projects           Explore projects',
+      '  leaderboard        View ranking',
+      '  ideas              Community ideas',
+      '  events             Upcoming events',
+      '  badges             Your verified badges',
+      '  refresh            Reload live data',
+      '  role               Show access role',
+      '  clear              Clear terminal',
+      '  logout             Sign out'
+    );
+  } else if (command === 'student') {
+    setAuthRole('student');
+    setAuthModal(true);
+    output.push('⚡ Student registration modal opened (Student Flow Activated).');
+  } else if (command === 'dev on') {
+    const devUser = { name: 'Lead Developer', role: 'instructor', email: 'dev@utb.edu.bh', level: 99, xp: 9999 };
+    localStorage.setItem('utb_user', JSON.stringify(devUser));
+    output.push('🔓 Developer / instructor mode activated. Redirecting to Instructor Console...');
     setTerminalLines((prev) => [...prev, ...output]);
+    setTimeout(() => {
+      window.location.href = '/instructor';
+    }, 600);
+    return;
+  } else if (command === 'dev off') {
+    localStorage.removeItem('utb_token');
+    localStorage.removeItem('utb_user');
+    setCommunity((current) => ({ ...(current || {}), user: null }));
+    setAuthRole('guest');
+    setUtbEmail('');
+    setStudentId('');
+    output.push('🔒 Developer mode disabled. Redirecting to community...');
+    setTerminalLines((prev) => [...prev, ...output]);
+    setTimeout(() => {
+      window.location.href = '/community';
+    }, 600);
+    return;
+  } else if (command === 'logout' || command === 'signout') {
+    localStorage.removeItem('utb_token');
+    localStorage.removeItem('utb_user');
+    setAuthRole('guest');
+    setUtbEmail('');
+    setStudentId('');
+    output.push(
+      '✓ Successfully signed out.',
+      '🔄 Session switched to Guest Mode.'
+    );
+  } else if (command === 'status') {
+    output.push(
+      `session: ${user ? 'authenticated' : 'guest'}`,
+      `role: ${user?.role || 'guest'}`,
+      `level: ${user?.level ?? '—'}`,
+      `xp: ${user?.xp ?? '—'}`,
+      `streak: ${user?.streak ?? '—'}`,
+      `rank: ${user?.rank ?? '—'}`
+    );
+  } else if (command === 'profile') {
+    if (!user) output.push('No authenticated profile. Sign in with your account.');
+    else output.push(
+      `name: ${user.name || '—'}`,
+      `email: ${user.email || '—'}`,
+      `major: ${user.major || '—'}`,
+      `role: ${user.role || '—'}`
+    );
+  } else if (command === 'role') {
+    output.push(`access_role: ${user?.role || 'guest'}`);
+  } else if (command === 'challenges') {
+    output.push(...(challenges.length
+      ? challenges.slice(0, 8).map((item) => `#${item.id} ${item.title} +${item.reward || 0} XP`)
+      : ['No live challenges.']));
+  } else if (command === 'tasks') {
+    output.push(...(tasks.length
+      ? tasks.slice(0, 8).map((item) => `${item.status === 'Completed' ? '✓' : '○'} ${item.title}`)
+      : ['No tasks assigned.']));
+  } else if (command === 'teams') {
+    output.push(...(teams.length ? teams.slice(0, 8).map((team) => `${team.name} — ${team.members || 0}/${team.max || 0}`) : ['No teams available.']));
+  } else if (command === 'projects') {
+    output.push(...(projects.length ? projects.slice(0, 8).map((project) => project.title) : ['No projects published.']));
+  } else if (command === 'leaderboard') {
+    output.push(...(leaderboard.length ? leaderboard.slice(0, 8).map((person) => `${person.rank}. ${person.name} — ${person.xp} XP`) : ['Leaderboard is empty.']));
+  } else if (command === 'ideas') {
+    output.push(...(ideas.length ? ideas.slice(0, 8).map((idea) => `${idea.title} — ${idea.votes || 0} votes`) : ['No community ideas.']));
+  } else if (command === 'events') {
+    output.push(...(events.length ? events.slice(0, 8).map((event) => `${event.date || formatDate(event.startsAt)} — ${event.title}`) : ['No upcoming events.']));
+  } else if (command === 'badges') {
+    output.push(...(badges.length ? badges.slice(0, 8).map((badge) => `${badge.icon || '◇'} ${badge.name}`) : ['No verified badges yet.']));
+  } else if (command === 'refresh') {
+    loadCommunity();
+    output.push('Refreshing live community data...');
+  } else if (command === 'clear') {
+    setTerminalLines([]);
     setTerminalInput('');
+    return;
+  } else {
+    output.push(`command not found: ${rawCommand}`, 'Type "help" for available commands.');
   }
 
-  function handleTerminalKeyDown(event) {
-    if (event.key === 'Enter') runCommand(terminalInput);
+  setTerminalLines((prev) => [...prev, ...output]);
+  setTerminalInput('');
+}
+
+function handleTerminalKeyDown(event) {
+  if (event.key === 'Enter') {
+    console.log("Enter pressed, command:", terminalInput);
+    runCommand(terminalInput);
   }
+}
 
   return (
     <main className="community-shell">
@@ -671,14 +824,17 @@ export default function StudentCommunityPage() {
   .auth-identity-summary { display:grid; grid-template-columns:90px 1fr; gap:8px 12px; margin-top:18px; padding:14px; border:1px solid var(--line); border-radius:12px; background:#030908; font:10px "SFMono-Regular",Consolas,monospace; }
   .auth-identity-summary span { color:var(--muted); }
   .auth-identity-summary strong { color:var(--accent); overflow-wrap:anywhere; }
-  .microsoft-button { width:100%; min-height:56px; margin-top:16px; display:flex; align-items:center; gap:12px; padding:0 16px; border:1px solid rgba(141,255,202,.26); border-radius:13px; background:#f2f6f4; color:#07100e; font-size:12px; font-weight:850; }
-  .microsoft-button:hover { background:#fff; transform:translateY(-1px); }
-  .microsoft-button:disabled { opacity:.65; cursor:wait; }
-  .microsoft-button b { margin-left:auto; font-size:18px; }
-  .microsoft-mark { width:22px; height:22px; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2px; }
-  .microsoft-mark i:nth-child(1){background:#f35325}.microsoft-mark i:nth-child(2){background:#81bc06}.microsoft-mark i:nth-child(3){background:#05a6f0}.microsoft-mark i:nth-child(4){background:#ffba08}
-  .auth-security { margin-top:11px; color:var(--muted); text-align:center; font:9px "SFMono-Regular",Consolas,monospace; }
-  .auth-security span { color:var(--accent); }
+  .otp-input { width:100%; min-height:58px; margin-top:10px; border:1px solid rgba(141,255,202,.2); border-radius:13px; background:#030908; color:var(--accent); outline:0; padding:0 16px; text-align:center; letter-spacing:.42em; font:800 24px "SFMono-Regular",Consolas,monospace; box-shadow:inset 0 0 0 1px rgba(255,255,255,.01); }
+  .otp-input:focus { border-color:rgba(141,255,202,.5); box-shadow:0 0 0 3px rgba(141,255,202,.06); }
+  .otp-input::placeholder { color:#466057; letter-spacing:.3em; }
+  .otp-message { margin-top:12px; padding:10px 12px; border:1px solid rgba(141,255,202,.12); border-radius:10px; color:var(--soft); background:rgba(141,255,202,.035); font:10px "SFMono-Regular",Consolas,monospace; line-height:1.5; }
+  .otp-error { margin-top:12px; padding:10px 12px; border:1px solid rgba(255,133,133,.2); border-radius:10px; color:#ffabab; background:rgba(255,133,133,.045); font:10px "SFMono-Regular",Consolas,monospace; line-height:1.5; }
+  .otp-resend { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; color:var(--muted); font:10px "SFMono-Regular",Consolas,monospace; }
+  .otp-resend button { border:0; background:transparent; color:var(--accent); padding:0; font:inherit; font-weight:800; cursor:pointer; }
+  .otp-resend button:disabled { color:#466057; cursor:not-allowed; }
+  .otp-verify-button { width:100%; min-height:56px; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:12px; padding:0 16px; border:1px solid rgba(141,255,202,.26); border-radius:13px; background:rgba(141,255,202,.09); color:var(--accent); font-size:12px; font-weight:850; }
+  .otp-verify-button:hover:not(:disabled) { background:rgba(141,255,202,.14); transform:translateY(-1px); }
+  .otp-verify-button:disabled { opacity:.6; cursor:wait; }
   .auth-terminal-footer { margin-top:18px; color:#466057; text-align:center; font:9px "SFMono-Regular",Consolas,monospace; }
   .profile-mini {
           display: flex;
@@ -1921,6 +2077,80 @@ export default function StudentCommunityPage() {
           margin-top: 18px;
         }
 
+        .notification-backdrop {
+          position: fixed;
+          inset: 72px 0 0;
+          z-index: 44;
+          border: 0;
+          background: rgba(0, 0, 0, 0.18);
+        }
+
+        .notification-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notification-close {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 auto;
+        }
+
+        .community-loading-bar {
+          position: fixed;
+          top: 72px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          z-index: 70;
+          overflow: hidden;
+          background: rgba(141, 255, 202, 0.04);
+          pointer-events: none;
+        }
+
+        .community-loading-bar span:first-child {
+          display: block;
+          width: 35%;
+          height: 100%;
+          background: var(--accent);
+          box-shadow: 0 0 14px rgba(141, 255, 202, 0.45);
+          animation: communityLoading 1.1s ease-in-out infinite;
+        }
+
+        @keyframes communityLoading {
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(320%); }
+        }
+
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        .mobile-nav-count {
+          position: absolute;
+          top: 4px;
+          right: 18%;
+          min-width: 14px;
+          height: 14px;
+          padding: 0 4px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          background: var(--accent);
+          color: #06120d;
+          font-size: 7px;
+          font-weight: 900;
+        }
+
         .notification-panel {
           position: fixed;
           top: 62px;
@@ -2113,6 +2343,9 @@ export default function StudentCommunityPage() {
           .topbar {
             padding: 0 13px;
             height: 64px;
+
+           .notification-backdrop { inset: 64px 0 0; }
+           .community-loading-bar { top: 64px; }
           }
 
           .layout {
@@ -2223,6 +2456,7 @@ export default function StudentCommunityPage() {
           }
 
           .mobile-nav-item {
+             position: relative;
             border: 0;
             background: transparent;
             color: var(--muted);
@@ -2299,27 +2533,32 @@ export default function StudentCommunityPage() {
       </header>
 
       {notificationOpen && (
-        <div className="notification-panel">
-          <div className="panel-header">
-            <div>
-              <h3 className="panel-title">Notifications</h3>
-              <div className="panel-subtitle">Live activity from your account</div>
+        <>
+          <button className="notification-backdrop" aria-label="Close notifications" onClick={() => setNotificationOpen(false)} />
+          <div className="notification-panel">
+            <div className="panel-header">
+              <div>
+                <h3 className="panel-title">Notifications</h3>
+                <div className="panel-subtitle">Live activity from your account</div>
+              </div>
+              <div className="notification-actions">
+                {user && <button className="btn" onClick={() => mutate('/community/notifications/read-all')}>Mark all read</button>}
+                <button className="icon-button notification-close" onClick={() => setNotificationOpen(false)} aria-label="Close notifications">×</button>
+              </div>
             </div>
-            {user && <button className="btn" onClick={() => mutate('/community/notifications/read-all')}>Mark all read</button>}
+            {notifications.length ? notifications.map((item) => (
+              <div className="notification-item" key={item.id}>
+                <div className="notification-title">{item.title}</div>
+                <div className="notification-copy">{item.message}</div>
+                <div className="activity-time">{formatDate(item.createdAt)}</div>
+              </div>
+            )) : (
+              <EmptyState icon="◉" title="No notifications" text={user ? 'You are all caught up.' : 'Sign in to receive community notifications.'} />
+            )}
           </div>
-          {notifications.length ? notifications.map((item) => (
-            <div className="notification-item" key={item.id}>
-              <div className="notification-title">{item.title}</div>
-              <div className="notification-copy">{item.message}</div>
-              <div className="activity-time">{formatDate(item.createdAt)}</div>
-            </div>
-          )) : (
-            <EmptyState icon="◉" title="No notifications" text={user ? 'You are all caught up.' : 'Sign in to receive community notifications.'} />
-          )}
-        </div>
+        </>
       )}
-
-      <div className="layout">
+<div className="layout">
         <aside className={`sidebar ${mobileMenu ? 'open' : ''}`}>
           <div className="terminal-label">~/student/community</div>
           <nav className="nav">
@@ -2511,33 +2750,58 @@ export default function StudentCommunityPage() {
             </>
           )}
 
-          {activeSection === 'challenges' && (
+{activeSection === 'challenges' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; challenges.list()</div><h2>Engineering Challenges</h2><p>Live challenges published by instructors.</p></div><button className="btn btn-primary" onClick={openAuthModal}>{user ? 'View Profile' : 'Sign in'}</button></div>
-              <div className="filter-row">
-                {['All', ...Array.from(new Set(challenges.map((item) => item.category || item.type).filter(Boolean)))].map((filter) => <button key={filter} className={`filter-chip ${challengeFilter === filter ? 'active' : ''}`} onClick={() => setChallengeFilter(filter)}>{filter}</button>)}
-                <input className="search-input" placeholder="Search challenges..." value={search} onChange={(event) => setSearch(event.target.value)} />
+              <div className="section-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '24px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '22px' }}>Engineering Challenges</h2>
+                </div>
+                <button className="btn btn-primary" onClick={openAuthModal}>
+                  {user ? 'View Profile' : 'Sign in'}
+                </button>
               </div>
+
               <div className="challenge-grid">
                 {filteredChallenges.map((challenge) => (
                   <article className="challenge-card" key={challenge.id}>
-                    <div className="challenge-top"><div className="challenge-icon">{challenge.icon || '⚡'}</div><Pill tone={challenge.status === 'Open' ? 'green' : 'orange'}>{challenge.status || '—'}</Pill></div>
+                    <div className="challenge-top">
+                      <div className="challenge-icon">{challenge.icon || '⚡'}</div>
+                      <Pill tone={challenge.status === 'Open' ? 'green' : 'orange'}>{challenge.status || '—'}</Pill>
+                    </div>
                     <div className="challenge-type">{challenge.type || challenge.category || 'Challenge'}</div>
                     <h3>{challenge.title}</h3>
                     <p>{challenge.description}</p>
-                    <div className="challenge-meta"><span>{challenge.time || '—'}</span><Difficulty level={challenge.difficultyLevel} /><span>+{challenge.reward || 0} XP</span></div>
+                    <div className="challenge-meta">
+                      <span>{challenge.time || '—'}</span>
+                      <Difficulty level={challenge.difficultyLevel} />
+                      <span>+{challenge.reward || 0} XP</span>
+                    </div>
                     <div className="skill-row">{(challenge.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div>
                     <button className="btn btn-primary" style={{ width: '100%', marginTop: 14 }} onClick={() => setSelectedChallenge(challenge)}>VIEW CHALLENGE</button>
                   </article>
                 ))}
               </div>
-              {!filteredChallenges.length && <EmptyState icon="⚡" title="No challenges available" text="There are no published challenges matching your filters." />}
+
+              {!filteredChallenges.length && (
+                <EmptyState 
+                  icon="⚡" 
+                  title="No challenges available" 
+                  text="There are no published challenges matching your filters." 
+                  action={
+                    <button className="btn btn-primary radar-btn" onClick={() => showToast('Challenge notification set!')}>
+                      [ NOTIFY ME ON NEW CHALLENGE ]
+                    </button>
+                  }
+                />
+              )}
             </section>
           )}
 
           {activeSection === 'tasks' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; tasks.queue()</div><h2>Your Tasks</h2><p>Tasks assigned by the academic system.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Your Tasks</h2>
+              </div>
               <div className="panel">
                 <div className="panel-body">
                   {tasks.length ? tasks.map((task) => (
@@ -2553,7 +2817,9 @@ export default function StudentCommunityPage() {
 
           {activeSection === 'teams' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; teams.directory()</div><h2>Teams</h2><p>Join or discover teams created by the community.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Teams</h2>
+              </div>
               <div className="resource-grid">
                 {teams.map((team) => (
                   <article className="resource-card" key={team.id}>
@@ -2567,7 +2833,9 @@ export default function StudentCommunityPage() {
 
           {activeSection === 'projects' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; projects.showcase()</div><h2>Projects</h2><p>Student work published by the community.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Projects</h2>
+              </div>
               <div className="resource-grid">
                 {projects.map((project) => (
                   <article className="resource-card" key={project.id}>
@@ -2581,7 +2849,9 @@ export default function StudentCommunityPage() {
 
           {activeSection === 'ideas' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; ideas.hub()</div><h2>Community Ideas</h2><p>Ideas proposed and voted on by the community.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Community Ideas</h2>
+              </div>
               <div className="resource-grid">
                 {ideas.map((idea) => (
                   <article className="resource-card" key={idea.id}>
@@ -2595,7 +2865,9 @@ export default function StudentCommunityPage() {
 
           {activeSection === 'leaderboard' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; leaderboard.rank()</div><h2>Smart Leaderboard</h2><p>Ranking calculated from verified XP.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Smart Leaderboard</h2>
+              </div>
               <div className="leaderboard">
                 {leaderboard.map((person) => <div className={`leader-row ${user && person.id === user.id ? 'you' : ''}`} key={person.id || person.rank}><div className="leader-rank">{person.rank || '—'}</div><div className="avatar">{initials(person.name)}</div><div style={{ flex: 1 }}><div className="leader-name">{person.name || 'Member'} {person.ambassador ? <Pill tone="green">AMBASSADOR</Pill> : null}</div><div className="leader-meta">{person.level != null ? `LEVEL ${person.level}` : ''}</div></div><strong>{person.xp ?? 0} XP</strong></div>)}
               </div>
@@ -2605,7 +2877,9 @@ export default function StudentCommunityPage() {
 
           {activeSection === 'events' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; events.schedule()</div><h2>Events</h2><p>Workshops, seminars, competitions and community events.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Events</h2>
+              </div>
               <div className="resource-grid">
                 {events.map((event) => (
                   <article className="resource-card" key={event.id}>
@@ -2617,17 +2891,260 @@ export default function StudentCommunityPage() {
             </section>
           )}
 
-          {activeSection === 'resources' && (
+{activeSection === 'resources' && (
             <section className="page-section">
-              <div className="section-heading"><div><div className="section-kicker">&gt; resources.index()</div><h2>Resources & Badges</h2><p>Academic resources and verified achievements.</p></div></div>
+              <div className="section-command-header" style={{ marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px' }}>Resources & Badges</h2>
+              </div>
               <div className="resource-grid">
-                {resources.map((resource) => <article className="resource-card" key={resource.id}><div className="card-icon">{resource.icon || '▣'}</div><Pill tone="blue">{resource.type || 'Resource'}</Pill><h3 className="card-title">{resource.title}</h3><div className="project-author">{resource.authorName || resource.author || 'Academic resource'}</div><p>{resource.description || ''}</p><div className="card-footer"><span className="project-stats">♡ {resource.likes || 0}</span><button className="accept-btn" onClick={() => resource.url ? window.open(resource.url, '_blank', 'noopener,noreferrer') : showToast('Resource link is not available.')}>OPEN</button></div></article>)}
+                {resources.map((resource) => (
+                  <article className="resource-card" key={resource.id}>
+                    <div className="card-icon">{resource.icon || '▣'}</div>
+                    <Pill tone="blue">{resource.type || 'Resource'}</Pill>
+                    <h3 className="card-title">{resource.title}</h3>
+                    <div className="project-author">{resource.authorName || resource.author || 'Academic resource'}</div>
+                    <p>{resource.description || ''}</p>
+                    <div className="card-footer">
+                      <span className="project-stats">♡ {resource.likes || 0}</span>
+                      <button className="accept-btn" onClick={() => resource.url ? window.open(resource.url, '_blank', 'noopener,noreferrer') : showToast('Resource link is not available.')}>OPEN</button>
+                    </div>
+                  </article>
+                ))}
               </div>
               {!resources.length && <EmptyState icon="▣" title="No resources yet" text="Resources will appear when instructors publish them." />}
             </section>
           )}
         </section>
       </div>
+
+      {loading && (
+        <div className="community-loading-bar" role="status" aria-live="polite">
+          <span />
+          <span className="sr-only">Syncing community data…</span>
+        </div>
+      )}
+{activeSection === 'challenges' && (
+            <section className="page-section">
+              <div className="section-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+                <div>
+                  <div className="command-badge">&gt; challenges.list()</div>
+                  <h2 style={{ margin: '6px 0 0', fontSize: '20px' }}>Engineering Challenges</h2>
+                </div>
+                <button className="btn btn-primary" onClick={openAuthModal}>
+                  {user ? 'View Profile' : 'Sign in'}
+                </button>
+              </div>
+
+              <div className="challenges-filter-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', background: 'rgba(8, 20, 18, 0.6)', padding: '12px 16px', borderRadius: '14px', border: '1px solid var(--line)' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {Array.from(new Set(challenges.map((item) => item.category || item.type).filter(Boolean))).map((filter) => (
+                    <button 
+                      key={filter} 
+                      className={`filter-chip ${challengeFilter === filter ? 'active' : ''}`} 
+                      onClick={() => setChallengeFilter(filter)}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                <input 
+                  className="search-input" 
+                  placeholder="Search challenges..." 
+                  value={search} 
+                  onChange={(event) => setSearch(event.target.value)} 
+                  style={{ minWidth: '220px', flex: '1' }}
+                />
+              </div>
+
+              <div className="challenge-grid">
+                {filteredChallenges.map((challenge) => (
+                  <article className="challenge-card" key={challenge.id}>
+                    <div className="challenge-top">
+                      <div className="challenge-icon">{challenge.icon || '⚡'}</div>
+                      <Pill tone={challenge.status === 'Open' ? 'green' : 'orange'}>{challenge.status || '—'}</Pill>
+                    </div>
+                    <div className="challenge-type">{challenge.type || challenge.category || 'Challenge'}</div>
+                    <h3>{challenge.title}</h3>
+                    <p>{challenge.description}</p>
+                    <div className="challenge-meta">
+                      <span>{challenge.time || '—'}</span>
+                      <Difficulty level={challenge.difficultyLevel} />
+                      <span>+{challenge.reward || 0} XP</span>
+                    </div>
+                    <div className="skill-row">{(challenge.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div>
+                    <button className="btn btn-primary" style={{ width: '100%', marginTop: 14 }} onClick={() => setSelectedChallenge(challenge)}>VIEW CHALLENGE</button>
+                  </article>
+                ))}
+              </div>
+
+              {!filteredChallenges.length && (
+                <EmptyState 
+                  icon="⚡" 
+                  title="No challenges available" 
+                  text="There are no published challenges matching your filters." 
+                  action={
+                    <button className="btn btn-primary radar-btn" onClick={() => showToast('Challenge notification set!')}>
+                      [ NOTIFY ME ON NEW CHALLENGE ]
+                    </button>
+                  }
+                />
+              )}
+            </section>
+          )}
+
+          {activeSection === 'tasks' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; tasks.queue()</div>
+                  <h2>Your Tasks</h2>
+                </div>
+              </div>
+              <div className="panel">
+                <div className="panel-body">
+                  {tasks.length ? tasks.map((task) => (
+                    <div className="task-row" key={task.id}>
+                      <div><strong>{task.title}</strong><div className="task-meta">{task.course || '—'} · {task.status || 'Pending'} · {task.deadline ? formatDate(task.deadline) : 'No deadline'}</div></div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{task.xp != null && <Pill tone="orange">+{task.xp} XP</Pill>}<button className="btn" disabled={!user || actionLoading || task.status === 'Completed'} onClick={() => completeTask(task)}>{task.status === 'Completed' ? 'COMPLETED ✓' : 'COMPLETE'}</button></div>
+                    </div>
+                  )) : <EmptyState icon="✓" title="No tasks assigned" text="Assigned tasks will appear here when an instructor publishes them." />}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'teams' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; teams.directory()</div>
+                  <h2>Teams</h2>
+                </div>
+              </div>
+              <div className="resource-grid">
+                {teams.map((team) => (
+                  <article className="resource-card" key={team.id}>
+                    <div className="card-icon">👥</div><Pill tone="blue">{team.status || 'Open'}</Pill><h3 className="card-title">{team.name}</h3><div className="project-author">{team.challenge || 'Community team'}</div><div className="skill-row">{(team.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div><div className="card-footer"><span className="project-stats">{team.members || 0}/{team.max || 0}</span><button className="accept-btn" disabled={!user || actionLoading || team.members >= team.max} onClick={() => joinTeam(team)}>{team.members >= team.max ? 'FULL' : user ? 'JOIN' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!teams.length && <EmptyState icon="👥" title="No teams yet" text="Teams will appear after students create or join them." />}
+            </section>
+          )}
+
+          {activeSection === 'projects' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; projects.showcase()</div>
+                  <h2>Projects</h2>
+                </div>
+              </div>
+              <div className="resource-grid">
+                {projects.map((project) => (
+                  <article className="resource-card" key={project.id}>
+                    <div className="card-icon">{project.icon || '🚀'}</div><Pill tone="blue">{project.status || 'Published'}</Pill><h3 className="card-title">{project.title}</h3><div className="project-author">{project.authorName || project.author || 'Community member'}</div><p>{project.description || ''}</p><div className="skill-row">{(project.tech || project.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div><div className="card-footer"><span className="project-stats">♡ {project.likes || 0}</span><button className="accept-btn" disabled={!user || actionLoading} onClick={() => likeProject(project)}>{user ? 'LIKE' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!projects.length && <EmptyState icon="🚀" title="No projects yet" text="Be the first to showcase a real BSIE project." />}
+            </section>
+          )}
+
+          {activeSection === 'ideas' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; ideas.hub()</div>
+                  <h2>Community Ideas</h2>
+                </div>
+              </div>
+              <div className="resource-grid">
+                {ideas.map((idea) => (
+                  <article className="resource-card" key={idea.id}>
+                    <div className="card-icon">💡</div><Pill tone="purple">{idea.category || 'Community'}</Pill><h3 className="card-title">{idea.title}</h3><div className="project-author">{idea.authorName || idea.author || 'Community member'}</div><p>{idea.description || ''}</p><div className="card-footer"><span className="project-stats">▲ {idea.votes || 0}</span><button className="accept-btn" disabled={!user || actionLoading} onClick={() => voteIdea(idea)}>{user ? 'VOTE' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!ideas.length && <EmptyState icon="💡" title="No ideas yet" text="Community ideas will appear here when students submit them." />}
+            </section>
+          )}
+
+          {activeSection === 'leaderboard' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; leaderboard.rank()</div>
+                  <h2>Smart Leaderboard</h2>
+                </div>
+              </div>
+              <div className="leaderboard">
+                {leaderboard.map((person) => <div className={`leader-row ${user && person.id === user.id ? 'you' : ''}`} key={person.id || person.rank}><div className="leader-rank">{person.rank || '—'}</div><div className="avatar">{initials(person.name)}</div><div style={{ flex: 1 }}><div className="leader-name">{person.name || 'Member'} {person.ambassador ? <Pill tone="green">AMBASSADOR</Pill> : null}</div><div className="leader-meta">{person.level != null ? `LEVEL ${person.level}` : ''}</div></div><strong>{person.xp ?? 0} XP</strong></div>)}
+              </div>
+              {!leaderboard.length && <EmptyState icon="🏆" title="Leaderboard is empty" text="Ranking will appear after students earn verified XP." />}
+            </section>
+          )}
+
+          {activeSection === 'events' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; events.schedule()</div>
+                  <h2>Events</h2>
+                </div>
+              </div>
+              <div className="resource-grid">
+                {events.map((event) => (
+                  <article className="resource-card" key={event.id}>
+                    <div className="card-icon">{event.icon || '◈'}</div><Pill tone="orange">{event.type || 'Event'}</Pill><h3 className="card-title">{event.title}</h3><div className="project-author">{formatDate(event.startsAt || event.date)}</div><p>{event.description || ''}</p><div className="card-footer"><span className="project-stats">{event.capacity ? `${event.registered || 0}/${event.capacity}` : ''}</span>{event.registeredByMe ? <button className="accept-btn" onClick={() => unregisterEvent(event)}>REGISTERED ✓</button> : <button className="accept-btn" disabled={!user || actionLoading} onClick={() => registerEvent(event)}>{user ? 'REGISTER' : 'SIGN IN'}</button>}</div>
+                  </article>
+                ))}
+              </div>
+              {!events.length && <EmptyState icon="◈" title="No upcoming events" text="Events will appear here when they are published." />}
+            </section>
+          )}
+
+{activeSection === 'resources' && (
+            <section className="page-section">
+              <div className="section-command-header">
+                <div>
+                  <div className="command-badge">&gt; resources.index()</div>
+                  <h2>Resources & Badges</h2>
+                </div>
+              </div>
+              <div className="resource-grid">
+                {resources.map((resource) => (
+                  <article className="resource-card" key={resource.id}>
+                    <div className="card-icon">{resource.icon || '▣'}</div>
+                    <Pill tone="blue">{resource.type || 'Resource'}</Pill>
+                    <h3 className="card-title">{resource.title}</h3>
+                    <div className="project-author">{resource.authorName || resource.author || 'Academic resource'}</div>
+                    <p>{resource.description || ''}</p>
+                    <div className="card-footer">
+                      <span className="project-stats">♡ {resource.likes || 0}</span>
+                      <button className="accept-btn" onClick={() => resource.url ? window.open(resource.url, '_blank', 'noopener,noreferrer') : showToast('Resource link is not available.')}>OPEN</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {!resources.length && <EmptyState icon="▣" title="No resources yet" text="Resources will appear when instructors publish them." />}
+            </section>
+          )}
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile community navigation">
+        {mobileNavItems.map((item) => (
+          <button
+            key={item.id}
+            className={`mobile-nav-item ${activeSection === item.id ? 'active' : ''}`}
+            onClick={() => navigate(item.id)}
+            aria-current={activeSection === item.id ? 'page' : undefined}
+          >
+            <span className="mobile-nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+            {item.count ? <span className="mobile-nav-count">{item.count}</span> : null}
+          </button>
+        ))}
+      </nav>
 
       <button className="floating-terminal" onClick={() => setTerminalOpen(true)} aria-label="Open BSIE terminal">&gt;_</button>
 
@@ -2663,7 +3180,7 @@ export default function StudentCommunityPage() {
         </div>
       )}
 
-      {authModal && (
+{authModal && (
         <div className="auth-terminal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAuthModal(); }}>
           <article className="auth-terminal-card" role="dialog" aria-modal="true" aria-labelledby="auth-terminal-title">
             <div className="auth-terminal-chrome">
@@ -2677,13 +3194,13 @@ export default function StudentCommunityPage() {
               <div className="auth-title-row">
                 <div>
                   <h2 id="auth-terminal-title">University Identity Terminal</h2>
-                  <p>Authenticate with your official University of Technology Bahrain identity.</p>
+                  <p>Authenticate with your email and student ID.</p>
                 </div>
                 <div className="auth-status">{authBusy ? 'CONNECTING' : 'SECURE'}</div>
               </div>
 
               <div className="auth-progress" aria-label={`Authentication step ${authStep} of 3`}>
-                {[['01','ROLE'],['02','IDENTITY'],['03','MICROSOFT']].map(([number, label], index) => {
+                {[['01','ROLE'],['02','IDENTITY'],['03','OTP']].map(([number, label], index) => {
                   const step = index + 1;
                   return (
                     <div className={`auth-progress-step ${authStep >= step ? 'done' : ''} ${authStep === step ? 'current' : ''}`} key={label}>
@@ -2719,27 +3236,30 @@ export default function StudentCommunityPage() {
                 </section>
               )}
 
-              {authStep === 2 && authRole === 'student' && (
+              {authStep === 2 && authRole !== 'guest' && (
                 <section className="auth-stage">
-                  <div className="auth-command">$ verify.student()</div>
-                  <h3>Enter your university student ID</h3>
-                  <p className="auth-stage-copy">Enter the university identifier only. Your official email is generated automatically.</p>
-                  <label className="auth-field-label">STUDENT ID</label>
-                  <div className="auth-input-shell"><span>&gt;</span><input autoFocus value={studentId} onChange={(event) => setStudentId(event.target.value.toUpperCase().replace(/\s/g, ''))} placeholder="BH23500186" autoComplete="username" /></div>
-                  <div className="auth-derived-email">University identity: <strong>{studentId ? `${studentId.toUpperCase()}@UTB.EDU.BH` : 'BHXXXXXXXX@UTB.EDU.BH'}</strong></div>
-                  <div className="auth-actions"><button className="btn" onClick={() => setAuthStep(1)}>← BACK</button><button className="btn btn-primary" onClick={continueIdentityStep}>CONTINUE →</button></div>
-                </section>
-              )}
+                  <div className="auth-command">$ identify.student()</div>
+                  <h3>Enter your email & student ID</h3>
+                  <p className="auth-stage-copy">A 6-digit verification code will be sent to your email.</p>
+                  
+                  <label className="auth-field-label">EMAIL ADDRESS</label>
+                  <div className="auth-input-shell">
+                    <span>&gt;</span>
+                    <input autoFocus type="email" value={utbEmail} onChange={(event) => { setUtbEmail(event.target.value.toLowerCase()); setOtpError(''); }} placeholder="name@domain.com" autoComplete="email" />
+                  </div>
 
-              {authStep === 2 && authRole === 'instructor' && (
-                <section className="auth-stage">
-                  <div className="auth-command">$ verify.instructor()</div>
-                  <h3>Enter your university faculty email</h3>
-                  <p className="auth-stage-copy">Faculty access is verified by Microsoft and then checked by the BSIE backend. Selecting Instructor does not grant instructor permissions by itself.</p>
-                  <label className="auth-field-label">FACULTY EMAIL</label>
-                  <div className="auth-input-shell"><span>&gt;</span><input autoFocus value={utbEmail} onChange={(event) => setUtbEmail(event.target.value)} placeholder="name@utb.edu.bh" autoComplete="email" /></div>
-                  <div className="auth-derived-email">Allowed domain: <strong>@UTB.EDU.BH</strong></div>
-                  <div className="auth-actions"><button className="btn" onClick={() => setAuthStep(1)}>← BACK</button><button className="btn btn-primary" onClick={continueIdentityStep}>CONTINUE →</button></div>
+                  <label className="auth-field-label">STUDENT ID</label>
+                  <div className="auth-input-shell">
+                    <span>&gt;</span>
+                    <input type="text" value={studentId} onChange={(event) => { setStudentId(event.target.value); setOtpError(''); }} placeholder="e.g. 20260000" />
+                  </div>
+
+                  <div className="auth-derived-email">Mode: <strong>Open Email Registration</strong></div>
+                  {otpError && <div className="otp-error" role="alert">{otpError}</div>}
+                  <div className="auth-actions">
+                    <button className="btn" onClick={() => setAuthStep(1)} disabled={authBusy}>← BACK</button>
+                    <button className="btn btn-primary" onClick={() => continueIdentityStep()} disabled={authBusy}>{authBusy ? 'SENDING...' : 'SEND VERIFICATION CODE'}</button>
+                  </div>
                 </section>
               )}
 
@@ -2753,62 +3273,50 @@ export default function StudentCommunityPage() {
                 </section>
               )}
 
-{authStep === 3 && authRole !== 'guest' && (
-  <section className="auth-stage">
-    <div className="auth-command">$ auth.local()</div>
-
-    <h3>Local Sign In</h3>
-
-    <p className="auth-stage-copy">
-      Sign in using your UTB account credentials.
-    </p>
-
-    <input
-      type="email"
-      placeholder="Email"
-      value={utbEmail}
-      onChange={(e) => setUtbEmail(e.target.value)}
-    />
-
-    <input
-      type="password"
-      placeholder="Password"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-    />
-
-    <button
-      className="microsoft-button"
-      onClick={handleLocalLogin}
-      disabled={authBusy}
-    >
-      <span>
-        {authBusy ? 'SIGNING IN...' : 'SIGN IN'}
-      </span>
-      <b>→</b>
-    </button>
-
-    <div className="auth-security">
-      <span>●</span> Secure local authentication
-    </div>
-
-    <div className="auth-actions">
-      <button
-        className="btn"
-        onClick={() => setAuthStep(2)}
-        disabled={authBusy}
-      >
-        ← BACK
-      </button>
-    </div>
-  </section>
-)}
-              <div className="auth-terminal-footer">session:// university-auth · provider:// Microsoft · domain:// UTB.EDU.BH</div>
+              {authStep === 3 && authRole !== 'guest' && (
+                <section className="auth-stage">
+                  <div className="auth-command">$ verify.access()</div>
+                  <h3>VERIFY ACCESS CODE</h3>
+                  <p className="auth-stage-copy">A 6-digit verification code was sent to <strong>{utbEmail}</strong></p>
+                  {otpMessage && <div className="otp-message" role="status">{otpMessage}</div>}
+                  <label className="auth-field-label" htmlFor="utb-otp">6-DIGIT CODE</label>
+                  <input
+                    id="utb-otp"
+                    className="otp-input"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    value={otpCode}
+                    onChange={(event) => {
+                      setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+                      setOtpError('');
+                    }}
+                    onKeyDown={(event) => { if (event.key === 'Enter') verifyOtp(); }}
+                    placeholder="______"
+                    aria-label="6-digit verification code"
+                  />
+                  {otpError && <div className="otp-error" role="alert">{otpError}</div>}
+                  <button className="otp-verify-button" onClick={verifyOtp} disabled={authBusy || otpCode.length !== 6}>
+                    {authBusy ? 'VERIFYING...' : 'VERIFY CODE'}
+                    <b>→</b>
+                  </button>
+                  <div className="otp-resend">
+                    <span>Didn't receive it?</span>
+                    <button type="button" onClick={resendOtp} disabled={authBusy || otpResendSeconds > 0}>
+                      {otpResendSeconds > 0 ? `RESEND IN ${otpResendSeconds}s` : 'RESEND CODE'}
+                    </button>
+                  </div>
+                  <div className="auth-actions">
+                    <button className="btn" onClick={() => { setAuthStep(2); setOtpCode(''); setOtpError(''); }} disabled={authBusy}>← CHANGE EMAIL</button>
+                  </div>
+                </section>
+              )}
+              <div className="auth-terminal-footer">session:// university-auth · provider:// OTP · mode:// open-domain</div>
             </div>
           </article>
         </div>
       )}
-
       {toast && <div className="toast">{toast}</div>}
     
 <style jsx global>{`

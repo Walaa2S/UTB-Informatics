@@ -1,8 +1,10 @@
-// Base URL of the Express API. Set NEXT_PUBLIC_API_URL in .env.local to override
-// (defaults to the backend's local dev port from backend/.env.example).
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Base URL of the Express API.
+// Set NEXT_PUBLIC_API_URL in .env.local.
+// Defaults to the local backend API.
 
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
+  
 function authHeaders() {
   if (typeof window === 'undefined') return {};
   const token = window.localStorage.getItem('utb_token');

@@ -1,499 +1,86 @@
 'use client';
+import { useEffect, useMemo, useState } from 'react';
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api').replace(/\/$/, '');
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
 
-import { useMemo, useState } from 'react';
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = { message: text }; }
 
-/* =========================================================
-   BSIE STUDENT COMMUNITY
-   Developer / Terminal Inspired Student Platform
-   Next.js + React
-   No external dependencies
-========================================================= */
+  if (!response.ok) {
+    const error = new Error(data?.message || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
 
-/* =========================================================
-   DATA
-========================================================= */
-
-const CHALLENGES = [
-  {
-    id: 101,
-    type: 'Quick Win',
-    icon: '⚡',
-    title: 'Clean Code Challenge',
-    description:
-      'Refactor a messy JavaScript module and improve readability, structure, and maintainability.',
-    category: 'Programming',
-    difficulty: 'Beginner',
-    difficultyLevel: 1,
-    time: '45 min',
-    reward: 120,
-    participants: 18,
-    maxParticipants: 30,
-    mode: 'Solo',
-    skills: ['JavaScript', 'Clean Code', 'Debugging'],
-    badge: '🐛 Bug Hunter',
-    status: 'Open',
-    progress: 0,
-  },
-  {
-    id: 102,
-    type: 'Technical',
-    icon: '🌐',
-    title: 'Network Architect',
-    description:
-      'Design a university network connecting three campus branches using VLANs, routing, and proper IP addressing.',
-    category: 'Networking',
-    difficulty: 'Advanced',
-    difficultyLevel: 3,
-    time: '3–4 hours',
-    reward: 400,
-    participants: 24,
-    maxParticipants: 40,
-    mode: 'Team',
-    skills: ['Cisco', 'Networking', 'VLAN', 'Routing'],
-    badge: '🌐 Network Builder',
-    status: 'Open',
-    progress: 0,
-  },
-  {
-    id: 103,
-    type: 'Technical',
-    icon: '🤖',
-    title: 'AI Mini Challenge',
-    description:
-      'Build a small machine-learning model that predicts a simple outcome from a provided dataset.',
-    category: 'AI',
-    difficulty: 'Intermediate',
-    difficultyLevel: 2,
-    time: '2 hours',
-    reward: 300,
-    participants: 16,
-    maxParticipants: 30,
-    mode: 'Solo',
-    skills: ['Python', 'AI', 'Data Science'],
-    badge: '🤖 AI Explorer',
-    status: 'Open',
-    progress: 0,
-  },
-  {
-    id: 104,
-    type: 'Collaborative Sprint',
-    icon: '🎨',
-    title: 'BSIE Portal UX Sprint',
-    description:
-      'Work as a team to redesign a student portal experience with a clean mobile-first user flow.',
-    category: 'UI/UX',
-    difficulty: 'Intermediate',
-    difficultyLevel: 2,
-    time: '7 days',
-    reward: 500,
-    participants: 21,
-    maxParticipants: 30,
-    mode: 'Team',
-    skills: ['Figma', 'UX', 'UI Design', 'Research'],
-    badge: '🎨 UX Builder',
-    status: 'Open',
-    progress: 35,
-  },
-  {
-    id: 105,
-    type: 'Hardcore',
-    icon: '🚀',
-    title: 'Smart IoT Dashboard',
-    description:
-      'Create a dashboard that receives IoT sensor data and visualizes the system status in real time.',
-    category: 'IoT',
-    difficulty: 'Expert',
-    difficultyLevel: 4,
-    time: '5–7 hours',
-    reward: 700,
-    participants: 12,
-    maxParticipants: 20,
-    mode: 'Team',
-    skills: ['IoT', 'Flutter', 'Firebase', 'UI/UX'],
-    badge: '🚀 IoT Builder',
-    status: 'Open',
-    progress: 15,
-  },
-  {
-    id: 106,
-    type: 'Quick Win',
-    icon: '🐍',
-    title: 'Python Debugging',
-    description:
-      'Find and fix five bugs inside a small Python application before the timer runs out.',
-    category: 'Programming',
-    difficulty: 'Beginner',
-    difficultyLevel: 1,
-    time: '30 min',
-    reward: 80,
-    participants: 42,
-    maxParticipants: 60,
-    mode: 'Solo',
-    skills: ['Python', 'Debugging'],
-    badge: '🐛 Debugger',
-    status: 'Open',
-    progress: 0,
-  },
-  {
-    id: 107,
-    type: 'Technical',
-    icon: '📊',
-    title: 'Data Miner',
-    description:
-      'Analyze a student performance dataset and extract meaningful patterns and visualizations.',
-    category: 'Data Science',
-    difficulty: 'Intermediate',
-    difficultyLevel: 2,
-    time: '2–3 hours',
-    reward: 320,
-    participants: 14,
-    maxParticipants: 25,
-    mode: 'Solo',
-    skills: ['Python', 'Pandas', 'Data Science'],
-    badge: '📊 Data Explorer',
-    status: 'Open',
-    progress: 0,
-  },
-  {
-    id: 108,
-    type: 'Security',
-    icon: '🔐',
-    title: 'Security Auditor',
-    description:
-      'Inspect a safe intentionally vulnerable code sample and identify common security weaknesses.',
-    category: 'Cyber Security',
-    difficulty: 'Advanced',
-    difficultyLevel: 3,
-    time: '2 hours',
-    reward: 450,
-    participants: 9,
-    maxParticipants: 20,
-    mode: 'Solo',
-    skills: ['Security', 'Code Review', 'Web'],
-    badge: '🔐 Security Scout',
-    status: 'Open',
-    progress: 0,
-  },
-];
-
-const TASKS = [
-  {
-    id: 1,
-    title: 'Create a GitHub Repository',
-    category: 'Development',
-    skill: 'Git',
-    time: '15 min',
-    difficulty: 'Beginner',
-    xp: 50,
-    status: 'Completed',
-  },
-  {
-    id: 2,
-    title: 'Design a User Flow',
-    category: 'UI/UX',
-    skill: 'Figma',
-    time: '30 min',
-    difficulty: 'Beginner',
-    xp: 70,
-    status: 'In Progress',
-  },
-  {
-    id: 3,
-    title: 'Configure a VLAN',
-    category: 'Networking',
-    skill: 'Cisco',
-    time: '45 min',
-    difficulty: 'Intermediate',
-    xp: 100,
-    status: 'Available',
-  },
-  {
-    id: 4,
-    title: 'Analyze Dataset',
-    category: 'Data Science',
-    skill: 'Python',
-    time: '60 min',
-    difficulty: 'Intermediate',
-    xp: 120,
-    status: 'Available',
-  },
-  {
-    id: 5,
-    title: 'Write Project Documentation',
-    category: 'Documentation',
-    skill: 'Technical Writing',
-    time: '30 min',
-    difficulty: 'Beginner',
-    xp: 60,
-    status: 'Available',
-  },
-];
-
-const PROJECTS = [
-  {
-    id: 1,
-    icon: '🚗',
-    title: 'Smart Campus Parking',
-    description:
-      'IoT-based parking system that detects available spaces and displays live status.',
-    tech: ['ESP32', 'Flutter', 'Firebase'],
-    author: '@ahmed',
-    likes: 42,
-    comments: 8,
-    status: 'Completed',
-  },
-  {
-    id: 2,
-    icon: '🤖',
-    title: 'AI Attendance System',
-    description:
-      'Experimental attendance platform using computer vision and student identification.',
-    tech: ['Python', 'AI', 'OpenCV'],
-    author: '@sara',
-    likes: 38,
-    comments: 11,
-    status: 'Prototype',
-  },
-  {
-    id: 3,
-    icon: '🌐',
-    title: 'Network Monitoring Tool',
-    description:
-      'Dashboard for monitoring network devices and basic connectivity status.',
-    tech: ['Python', 'Networking', 'Dashboard'],
-    author: '@ali',
-    likes: 27,
-    comments: 5,
-    status: 'Completed',
-  },
-];
-
-const IDEAS = [
-  {
-    id: 1,
-    title: 'Smart University Navigation',
-    description:
-      'An interactive campus navigation system for finding classrooms, labs, and facilities.',
-    author: '@noor',
-    votes: 42,
-    interested: 18,
-    category: 'Smart Campus',
-  },
-  {
-    id: 2,
-    title: 'Student Skill Exchange',
-    description:
-      'Students teach each other technical skills through short peer-to-peer sessions.',
-    author: '@mohammed',
-    votes: 31,
-    interested: 14,
-    category: 'Community',
-  },
-  {
-    id: 3,
-    title: 'AI Study Assistant',
-    description:
-      'A study assistant that recommends resources and practice questions based on courses.',
-    author: '@fatima',
-    votes: 27,
-    interested: 11,
-    category: 'AI',
-  },
-];
-
-const TEAMS = [
-  {
-    id: 1,
-    name: 'IoT Mavericks',
-    challenge: 'Smart IoT Dashboard',
-    members: 4,
-    max: 5,
-    skills: ['IoT', 'Flutter', 'Firebase'],
-    status: 'Looking for 1 member',
-  },
-  {
-    id: 2,
-    name: 'UX Engineers',
-    challenge: 'BSIE Portal UX Sprint',
-    members: 3,
-    max: 5,
-    skills: ['Figma', 'UX', 'Research'],
-    status: 'Looking for 2 members',
-  },
-  {
-    id: 3,
-    name: 'Network Warriors',
-    challenge: 'Network Architect',
-    members: 5,
-    max: 5,
-    skills: ['Cisco', 'Routing', 'VLAN'],
-    status: 'Full',
-  },
-];
-
-const LEADERBOARD = [
-  { rank: 1, name: 'Ahmed', username: '@ahmed', xp: 2480, level: 7 },
-  { rank: 2, name: 'Sara', username: '@sara', xp: 2310, level: 7 },
-  { rank: 3, name: 'Walaa', username: '@walaa', xp: 2180, level: 6 },
-  { rank: 4, name: 'Ali', username: '@ali', xp: 1940, level: 6 },
-  { rank: 5, name: 'Noor', username: '@noor', xp: 1810, level: 5 },
-  { rank: 6, name: 'Fatima', username: '@fatima', xp: 1670, level: 5 },
-];
-
-const EVENTS = [
-  {
-    id: 1,
-    icon: '🎤',
-    title: 'Huawei Technical Workshop',
-    date: 'SEP 18',
-    type: 'Workshop',
-    attendees: 42,
-  },
-  {
-    id: 2,
-    icon: '💻',
-    title: 'BSIE Coding Night',
-    date: 'SEP 24',
-    type: 'Competition',
-    attendees: 31,
-  },
-  {
-    id: 3,
-    icon: '🚀',
-    title: 'IoT Innovation Sprint',
-    date: 'OCT 02',
-    type: 'Hackathon',
-    attendees: 58,
-  },
-];
-
-const RESOURCES = [
-  {
-    id: 1,
-    icon: '📘',
-    title: 'Cisco VLAN Cheat Sheet',
-    type: 'Cheat Sheet',
-    author: '@student01',
-    likes: 32,
-  },
-  {
-    id: 2,
-    icon: '🐍',
-    title: 'Python Data Science Starter',
-    type: 'Guide',
-    author: '@sara',
-    likes: 28,
-  },
-  {
-    id: 3,
-    icon: '🎨',
-    title: 'Figma UX Resources',
-    type: 'Resource Pack',
-    author: '@noor',
-    likes: 21,
-  },
-];
-
-const BADGES = [
-  { icon: '⚡', name: 'Quick Starter', description: 'Complete your first task.' },
-  { icon: '🐛', name: 'Bug Hunter', description: 'Solve 5 debugging challenges.' },
-  { icon: '🌐', name: 'Network Builder', description: 'Complete networking challenges.' },
-  { icon: '🎨', name: 'UX Builder', description: 'Complete a UX challenge.' },
-  { icon: '🤖', name: 'AI Explorer', description: 'Complete an AI challenge.' },
-  { icon: '👥', name: 'Team Player', description: 'Join 5 team challenges.' },
-];
-
-const ACTIVITY = [
-  {
-    icon: '🏆',
-    user: '@ahmed',
-    action: 'completed',
-    target: 'Network Architect',
-    time: '4 min ago',
-    xp: '+400 XP',
-  },
-  {
-    icon: '🚀',
-    user: '@sara',
-    action: 'published',
-    target: 'AI Attendance System',
-    time: '18 min ago',
-    xp: '',
-  },
-  {
-    icon: '👥',
-    user: '@ali',
-    action: 'joined',
-    target: 'Network Warriors',
-    time: '32 min ago',
-    xp: '',
-  },
-  {
-    icon: '💡',
-    user: '@noor',
-    action: 'created',
-    target: 'Smart University Navigation',
-    time: '1 hour ago',
-    xp: '',
-  },
-  {
-    icon: '🤝',
-    user: '@fatima',
-    action: 'helped',
-    target: '3 students',
-    time: '2 hours ago',
-    xp: '+90 XP',
-  },
-];
-
-/* =========================================================
-   SMALL COMPONENTS
-========================================================= */
-
-function Icon({ children, className = '' }) {
-  return <span className={`icon ${className}`}>{children}</span>;
+  return data;
 }
 
-function Pill({ children, tone = 'default' }) {
-  return <span className={`pill pill-${tone}`}>{children}</span>;
+function Pill({ children, tone = 'default', ...props }) {
+  return <span className={`pill ${tone}`} {...props}>{children}</span>;
 }
 
-function ProgressBar({ value, label = true }) {
+function ProgressBar({ value = 0 }) {
   return (
-    <div className="progress-wrap">
-      <div className="progress-track">
-        <div className="progress-fill" style={{ width: `${value}%` }} />
-      </div>
-      {label && <span className="progress-value">{value}%</span>}
+    <div className="progress-track">
+      <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
     </div>
   );
 }
 
-function Difficulty({ level }) {
+function Difficulty({ level = 0 }) {
+  const numeric = Number(level) || 0;
   return (
-    <span className="difficulty" aria-label={`Difficulty ${level} of 4`}>
-      {Array.from({ length: 4 }).map((_, index) => (
-        <span key={index} className={index < level ? 'active' : ''}>
-          ●
-        </span>
+    <span className="difficulty" aria-label={`Difficulty ${numeric} of 4`}>
+      {[1, 2, 3, 4].map((item) => (
+        <span key={item} className={item <= numeric ? 'active' : ''}>●</span>
       ))}
     </span>
   );
 }
 
-function EmptyState({ icon = '⌘', title, text }) {
+function EmptyState({ icon = '⚡', title, text, action }) {
+  const [pinged, setPinged] = useState(false);
   return (
-    <div className="empty-state">
-      <div className="empty-icon">{icon}</div>
-      <h3>{title}</h3>
-      <p>{text}</p>
+    <div className="radar-empty-state">
+      <div className="radar-sweep-effect"></div>
+      <div className="radar-content">
+        <div className="radar-tag">[!] RADAR ACTIVE: SCANNING INSTRUCTOR NODES</div>
+        <div className="empty-icon" style={{ fontSize: '28px', marginBottom: '8px' }}>{icon}</div>
+        <h3 style={{ margin: '6px 0', fontSize: '15px', color: 'var(--text)' }}>{title}</h3>
+        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '4px 0 14px' }}>{text}</p>
+        {action || (
+          <button 
+            className="btn btn-primary" 
+            style={{ minHeight: '36px', fontSize: '10px' }}
+            onClick={() => setPinged(true)}
+          >
+            {pinged ? 'NODE PINGED ✓' : '[ PING INSTRUCTOR NODE ]'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-/* =========================================================
-   MAIN PAGE
-========================================================= */
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function initials(name = '') {
+  return String(name).trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'GU';
+}
 
 export default function StudentCommunityPage() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -501,34 +88,63 @@ export default function StudentCommunityPage() {
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalInput, setTerminalInput] = useState('');
   const [terminalLines, setTerminalLines] = useState([
-    'BSIE Community Terminal v1.0.0',
-    'Connected as @walaa',
+    'BSIE Community Terminal v2.0.0',
+    'Session: checking...',
     'Type "help" to view available commands.',
   ]);
 
-  const [selectedChallenge, setSelectedChallenge] = useState(null);
-  const [challengeState, setChallengeState] = useState({});
-  const [taskState, setTaskState] = useState(
-    Object.fromEntries(TASKS.map((task) => [task.id, task.status]))
-  );
+  const [utbEmail, setUtbEmail] = useState('');
+  const [studentId, setStudentId] = useState(''); // الرقم التعريفي للطالب
+  const [authBusy, setAuthBusy] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpResendSeconds, setOtpResendSeconds] = useState(0);
+  const [otpMessage, setOtpMessage] = useState('');
+  const [otpError, setOtpError] = useState('');
 
+  const [community, setCommunity] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authModal, setAuthModal] = useState(false);
+  const [authStep, setAuthStep] = useState(1);
+  const [authRole, setAuthRole] = useState(null);
+  const [selectedChallenge, setSelectedChallenge] = useState(null);
   const [challengeFilter, setChallengeFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [toast, setToast] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const userXP = 2180;
-  const level = 6;
-  const nextLevelXP = 2500;
-  const currentLevelXP = 2000;
-  const levelProgress = Math.round(
-    ((userXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
-  );
+  const user = community?.user || null;
+  const isGuest = !user;
+  const role = String(user?.role || 'student').toLowerCase();
+  const isInstructor = role === 'instructor' || role === 'admin';
+  const challenges = community?.challenges || [];
+  const tasks = community?.tasks || [];
+  const teams = community?.teams || [];
+  const projects = community?.projects || [];
+  const ideas = community?.ideas || [];
+  const leaderboard = community?.leaderboard || [];
+  const events = community?.events || [];
+  const resources = community?.resources || [];
+  const badges = community?.badges || [];
+  const notifications = community?.notifications || [];
+  const activity = community?.activity || [];
+  const deadlines = community?.deadlines || [];
+  const stats = community?.stats || {};
+  const dailyChallenge = community?.dailyChallenge || null;
 
+  const xp = Number(user?.xp || 0);
+  const level = Number(user?.level || 0);
+  const nextLevelXP = Number(user?.nextLevelXp || 0);
+  const currentLevelXP = Number(user?.currentLevelXp || 0);
+  const levelProgress = nextLevelXP > currentLevelXP
+    ? Math.round(((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
+    : 0;
+  
   const navItems = [
     { id: 'dashboard', icon: '⌂', label: 'Dashboard' },
-    { id: 'challenges', icon: '⚡', label: 'Challenges', count: 8 },
-    { id: 'tasks', icon: '✓', label: 'Tasks', count: 5 },
+    { id: 'challenges', icon: '⚡', label: 'Challenges', count: challenges.length || null },
+    { id: 'tasks', icon: '✓', label: 'Tasks', count: tasks.length || null },
     { id: 'teams', icon: '👥', label: 'Teams' },
     { id: 'projects', icon: '🚀', label: 'Projects' },
     { id: 'ideas', icon: '💡', label: 'Ideas' },
@@ -537,29 +153,31 @@ export default function StudentCommunityPage() {
     { id: 'resources', icon: '▣', label: 'Resources' },
   ];
 
+  // Mobile navigation keeps the five most-used student destinations visible.
+  const mobileNavItems = navItems.filter((item) =>
+    ['dashboard', 'challenges', 'tasks', 'leaderboard', 'resources'].includes(item.id)
+  );
+
   const filteredChallenges = useMemo(() => {
-    return CHALLENGES.filter((challenge) => {
+    const query = search.trim().toLowerCase();
+    return challenges.filter((challenge) => {
       const matchesFilter =
         challengeFilter === 'All' ||
         challenge.type === challengeFilter ||
         challenge.category === challengeFilter;
-
-      const query = search.toLowerCase();
-
-      const matchesSearch =
-        !query ||
-        challenge.title.toLowerCase().includes(query) ||
-        challenge.description.toLowerCase().includes(query) ||
-        challenge.skills.some((skill) => skill.toLowerCase().includes(query));
-
-      return matchesFilter && matchesSearch;
+      const text = [
+        challenge.title,
+        challenge.description,
+        ...(challenge.skills || []),
+      ].filter(Boolean).join(' ').toLowerCase();
+      return matchesFilter && (!query || text.includes(query));
     });
-  }, [challengeFilter, search]);
+  }, [challenges, challengeFilter, search]);
 
   function showToast(message) {
     setToast(message);
     window.clearTimeout(window.__bsieToast);
-    window.__bsieToast = window.setTimeout(() => setToast(''), 2600);
+    window.__bsieToast = window.setTimeout(() => setToast(''), 3000);
   }
 
   function navigate(section) {
@@ -568,137 +186,426 @@ export default function StudentCommunityPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function acceptChallenge(challenge) {
-    setChallengeState((prev) => ({
-      ...prev,
-      [challenge.id]: 'accepted',
-    }));
+async function loadCommunity() {
+    setLoading(true);
+    try {
+      // التحقق أولاً من وضع المطور المخزن محلياً
+      const localUser = localStorage.getItem('utb_user');
+      if (localUser) {
+        const parsedUser = JSON.parse(localUser);
+        const data = await apiFetch('/community').catch(() => ({}));
+        setCommunity({ ...data, user: parsedUser });
+        setLoading(false);
+        return;
+      }
 
-    showToast(`Challenge accepted: ${challenge.title}`);
+      const data = await apiFetch('/community');
+      setCommunity(data);
+   const currentUser = data?.user;
+if (currentUser && ['faculty', 'admin'].includes(String(currentUser.role).toLowerCase())) {
+  window.location.replace('/instructor');
+  return;
+}
+      setTerminalLines([
+        'BSIE Community Terminal v2.0.0',
+        currentUser ? `Connected as ${currentUser.username || currentUser.email}` : 'Session: guest',
+        'Type "help" to view available commands.',
+      ]);
+    } catch (error) {
+      const localUser = localStorage.getItem('utb_user');
+      setCommunity({ 
+        user: localUser ? JSON.parse(localUser) : null, 
+        challenges: [], tasks: [], teams: [], projects: [], ideas: [], leaderboard: [], events: [], resources: [], badges: [], notifications: [], activity: [], deadlines: [], stats: {} 
+      });
+      setTerminalLines([
+        'BSIE Community Terminal v2.0.0',
+        localUser ? 'Developer session active.' : 'Backend connection unavailable.',
+        'Type "help" for local commands.',
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadCommunity();
+    apiFetch('/auth/session')
+      .catch(() => null)
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  // Refresh published instructor content every 30s while the page is visible.
+  useEffect(() => {
+    const refreshCommunity = () => {
+      if (document.visibilityState === 'visible') loadCommunity();
+    };
+
+    const interval = window.setInterval(refreshCommunity, 30000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshCommunity();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (otpResendSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setOtpResendSeconds((seconds) => (seconds > 0 ? seconds - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [otpResendSeconds]);
+
+async function mutate(path, method = 'POST', body) {
+    setActionLoading(true);
+    try {
+      const response = await apiFetch(path, {
+        method,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      await loadCommunity();
+      showToast('Action completed successfully.');
+      return response;
+    } catch (error) {
+      if (error.status === 401) {
+        openAuthModal();
+        showToast('Please sign in first to continue.');
+      } else if (error.status === 403) {
+        showToast('You do not have permission for this action.');
+      } else if (error.status === 429) {
+        showToast('Too many requests. Please wait a moment and try again.');
+      } else {
+        showToast(error.message || 'Action failed.');
+      }
+      throw error;
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function acceptChallenge(challenge) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/challenges/${challenge.id}/accept`);
+  }
+
+  function completeTask(task) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/tasks/${task.id}/complete`);
   }
 
   function joinTeam(team) {
-    if (team.members >= team.max) {
-      showToast('This team is already full.');
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/teams/${team.id}/join`);
+  }
+
+  function likeProject(project) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/projects/${project.id}/like`);
+  }
+
+  function voteIdea(idea) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/ideas/${idea.id}/vote`);
+  }
+
+  function registerEvent(event) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    mutate(`/community/events/${event.id}/register`);
+  }
+
+  function unregisterEvent(event) {
+    if (!user) return;
+    mutate(`/community/events/${event.id}/unregister`);
+  }
+
+  function openAuthModal() {
+    setAuthStep(1);
+    setAuthRole(null);
+    setUtbEmail('');
+    setOtpCode('');
+    setOtpResendSeconds(0);
+    setOtpMessage('');
+    setOtpError('');
+    setAuthBusy(false);
+    setAuthModal(true);
+  }
+
+  function closeAuthModal() {
+    if (authBusy) return;
+    setAuthModal(false);
+  }
+
+  function selectAuthRole(nextRole) {
+    setAuthRole(nextRole);
+    setUtbEmail('');
+    setOtpCode('');
+    setOtpMessage('');
+    setOtpError('');
+    setOtpResendSeconds(0);
+    setAuthStep(2);
+  }
+
+function continueIdentityStep() {
+  if (authRole === 'guest') {
+    setAuthStep(2);
+    return;
+  }
+
+  const email = utbEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setOtpError('Please enter a valid email address.');
+    showToast('Please enter a valid email address.');
+    return;
+  }
+
+  if (!studentId.trim()) {
+    setOtpError('Please enter your Student ID.');
+    showToast('Please enter your Student ID.');
+    return;
+  }
+
+  setUtbEmail(email);
+  setOtpError('');
+  requestOtp(email);
+}
+
+function continueAsGuest() {
+  setAuthModal(false);
+  showToast('Guest session active. Sign in later to unlock student features.');
+}
+
+async function requestOtp(emailOverride = null) {
+  const email = String(emailOverride || utbEmail).trim().toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setOtpError('Please enter a valid email address.');
+    showToast('Please enter a valid email address.');
+    setAuthStep(2);
+    return;
+  }
+
+  setAuthBusy(true);
+  setOtpError('');
+  setOtpMessage('');
+
+  try {
+    const result = await apiFetch('/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, studentId }),
+    });
+
+    setUtbEmail(email);
+    setOtpCode('');
+    setOtpResendSeconds(60);
+    setOtpMessage(result?.message || `Verification code sent to ${email}`);
+    setAuthStep(3);
+  } catch (error) {
+    setOtpError(error?.message || 'Unable to send verification code.');
+  } finally {
+    setAuthBusy(false);
+  }
+}
+
+  async function verifyOtp() {
+    const email = utbEmail.trim().toLowerCase();
+    const otp = otpCode.trim();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setOtpError('Please enter a valid email address.');
+      setAuthStep(2);
       return;
     }
 
-    showToast(`Request sent to join ${team.name}.`);
-  }
-
-  function updateTask(task) {
-    setTaskState((prev) => ({
-      ...prev,
-      [task.id]: 'Completed',
-    }));
-
-    showToast(`Task completed. +${task.xp} XP`);
-  }
-
-  function runCommand(rawCommand) {
-    const command = rawCommand.trim().toLowerCase();
-
-    if (!command) return;
-
-    const output = [`> ${rawCommand}`];
-
-    if (command === 'help') {
-      output.push(
-        'Available commands:',
-        '  challenges       Browse challenges',
-        '  tasks            View your tasks',
-        '  status           Show student status',
-        '  profile          Show profile',
-        '  teams            Find teams',
-        '  projects         Explore projects',
-        '  leaderboard      View ranking',
-        '  ideas            Community ideas',
-        '  events           Upcoming events',
-        '  badges           Your badges',
-        '  clear            Clear terminal',
-        '  sudo coffee      ☕'
-      );
-    } else if (command === 'status') {
-      output.push(
-        'student: @walaa',
-        `level: ${level}`,
-        `xp: ${userXP}`,
-        'streak: 7 days',
-        'challenges_completed: 14',
-        'projects: 6',
-        'badges: 4'
-      );
-    } else if (command === 'profile') {
-      output.push(
-        '@walaa',
-        'major: Informatics Engineering',
-        'role: student',
-        'rank: #3',
-        'skills: UI/UX, IoT, Flutter, Networking'
-      );
-    } else if (command === 'challenges' || command === 'challenge list') {
-      output.push(
-        'Open challenges:',
-        ...CHALLENGES.slice(0, 5).map(
-          (item) => `#${item.id}  ${item.title}  +${item.reward} XP`
-        )
-      );
-    } else if (command === 'tasks') {
-      output.push(
-        'Tasks:',
-        ...TASKS.map(
-          (item) => `${item.status === 'Completed' ? '✓' : '○'} ${item.title}`
-        )
-      );
-    } else if (command === 'teams') {
-      output.push(
-        'Available teams:',
-        ...TEAMS.map(
-          (team) => `${team.name} — ${team.members}/${team.max} members`
-        )
-      );
-    } else if (command === 'projects') {
-      output.push(
-        'Featured projects:',
-        ...PROJECTS.map((project) => `${project.title} by ${project.author}`)
-      );
-    } else if (command === 'leaderboard') {
-      output.push(
-        ...LEADERBOARD.slice(0, 5).map(
-          (person) => `${person.rank}. ${person.name} — ${person.xp} XP`
-        )
-      );
-    } else if (command === 'ideas') {
-      output.push(
-        ...IDEAS.map((idea) => `${idea.title} — ${idea.votes} votes`)
-      );
-    } else if (command === 'events') {
-      output.push(...EVENTS.map((event) => `${event.date} — ${event.title}`));
-    } else if (command === 'badges') {
-      output.push(...BADGES.map((badge) => `${badge.icon} ${badge.name}`));
-    } else if (command === 'sudo coffee') {
-      output.push(
-        '☕ Permission granted.',
-        'Productivity increased by 12%.',
-        'Remember to drink water too.'
-      );
-    } else if (command === 'clear') {
-      setTerminalLines([]);
-      setTerminalInput('');
+    if (!/^\d{6}$/.test(otp)) {
+      setOtpError('Enter the 6-digit verification code.');
       return;
-    } else {
-      output.push(
-        `command not found: ${rawCommand}`,
-        'Type "help" for available commands.'
-      );
     }
 
+    setAuthBusy(true);
+    setOtpError('');
+
+    try {
+      const result = await apiFetch('/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otpCode: otp }),
+      });
+
+      if (!result?.success || !result?.token || !result?.user) {
+        throw new Error(result?.message || 'Verification failed.');
+      }
+
+      localStorage.setItem('utb_token', result.token);
+      localStorage.setItem('utb_user', JSON.stringify(result.user));
+      setCommunity((current) => ({ ...(current || {}), user: result.user }));
+      
+      // إغلاق نافذة المصادقة وتحديث البيانات بدلاً من التوجيه لصفحة غير موجودة
+      setAuthModal(false);
+      await loadCommunity();
+      showToast('Successfully authenticated! Welcome to the workspace.');
+
+    } catch (error) {
+      setOtpError(error?.message || 'Invalid or expired verification code.');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function resendOtp() {
+    if (otpResendSeconds > 0 || authBusy) return;
+    requestOtp();
+  }
+
+  async function logout() {
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } finally {
+      setCommunity((current) => ({ ...(current || {}), user: null }));
+      setAuthModal(false);
+      showToast('Signed out.');
+    }
+  }
+
+function runCommand(rawCommand) {
+  const command = rawCommand.trim().toLowerCase();
+  if (!command) return;
+  const output = [`> ${rawCommand}`];
+
+  if (command === 'help') {
+    output.push(
+      'Available commands:',
+      '  student            Open student registration modal',
+      '  dev on             Activate instructor mode & open Instructor Console',
+      '  dev off            Reset session to guest mode',
+      '  status             Show authenticated status',
+      '  profile            Show your profile',
+      '  challenges         Browse live challenges',
+      '  tasks              View your tasks',
+      '  teams              Find teams',
+      '  projects           Explore projects',
+      '  leaderboard        View ranking',
+      '  ideas              Community ideas',
+      '  events             Upcoming events',
+      '  badges             Your verified badges',
+      '  refresh            Reload live data',
+      '  role               Show access role',
+      '  clear              Clear terminal',
+      '  logout             Sign out'
+    );
+  } else if (command === 'student') {
+    setAuthRole('student');
+    setAuthModal(true);
+    output.push('⚡ Student registration modal opened (Student Flow Activated).');
+  } else if (command === 'dev on') {
+    const devUser = { name: 'Lead Developer', role: 'instructor', email: 'dev@utb.edu.bh', level: 99, xp: 9999 };
+    localStorage.setItem('utb_user', JSON.stringify(devUser));
+    output.push('🔓 Developer / instructor mode activated. Redirecting to Instructor Console...');
     setTerminalLines((prev) => [...prev, ...output]);
+    setTimeout(() => {
+      window.location.href = '/instructor';
+    }, 600);
+    return;
+  } else if (command === 'dev off') {
+    localStorage.removeItem('utb_token');
+    localStorage.removeItem('utb_user');
+    setCommunity((current) => ({ ...(current || {}), user: null }));
+    setAuthRole('guest');
+    setUtbEmail('');
+    setStudentId('');
+    output.push('🔒 Developer mode disabled. Redirecting to community...');
+    setTerminalLines((prev) => [...prev, ...output]);
+    setTimeout(() => {
+      window.location.href = '/community';
+    }, 600);
+    return;
+  } else if (command === 'logout' || command === 'signout') {
+    localStorage.removeItem('utb_token');
+    localStorage.removeItem('utb_user');
+    setAuthRole('guest');
+    setUtbEmail('');
+    setStudentId('');
+    output.push(
+      '✓ Successfully signed out.',
+      '🔄 Session switched to Guest Mode.'
+    );
+  } else if (command === 'status') {
+    output.push(
+      `session: ${user ? 'authenticated' : 'guest'}`,
+      `role: ${user?.role || 'guest'}`,
+      `level: ${user?.level ?? '—'}`,
+      `xp: ${user?.xp ?? '—'}`,
+      `streak: ${user?.streak ?? '—'}`,
+      `rank: ${user?.rank ?? '—'}`
+    );
+  } else if (command === 'profile') {
+    if (!user) output.push('No authenticated profile. Sign in with your account.');
+    else output.push(
+      `name: ${user.name || '—'}`,
+      `email: ${user.email || '—'}`,
+      `major: ${user.major || '—'}`,
+      `role: ${user.role || '—'}`
+    );
+  } else if (command === 'role') {
+    output.push(`access_role: ${user?.role || 'guest'}`);
+  } else if (command === 'challenges') {
+    output.push(...(challenges.length
+      ? challenges.slice(0, 8).map((item) => `#${item.id} ${item.title} +${item.reward || 0} XP`)
+      : ['No live challenges.']));
+  } else if (command === 'tasks') {
+    output.push(...(tasks.length
+      ? tasks.slice(0, 8).map((item) => `${item.status === 'Completed' ? '✓' : '○'} ${item.title}`)
+      : ['No tasks assigned.']));
+  } else if (command === 'teams') {
+    output.push(...(teams.length ? teams.slice(0, 8).map((team) => `${team.name} — ${team.members || 0}/${team.max || 0}`) : ['No teams available.']));
+  } else if (command === 'projects') {
+    output.push(...(projects.length ? projects.slice(0, 8).map((project) => project.title) : ['No projects published.']));
+  } else if (command === 'leaderboard') {
+    output.push(...(leaderboard.length ? leaderboard.slice(0, 8).map((person) => `${person.rank}. ${person.name} — ${person.xp} XP`) : ['Leaderboard is empty.']));
+  } else if (command === 'ideas') {
+    output.push(...(ideas.length ? ideas.slice(0, 8).map((idea) => `${idea.title} — ${idea.votes || 0} votes`) : ['No community ideas.']));
+  } else if (command === 'events') {
+    output.push(...(events.length ? events.slice(0, 8).map((event) => `${event.date || formatDate(event.startsAt)} — ${event.title}`) : ['No upcoming events.']));
+  } else if (command === 'badges') {
+    output.push(...(badges.length ? badges.slice(0, 8).map((badge) => `${badge.icon || '◇'} ${badge.name}`) : ['No verified badges yet.']));
+  } else if (command === 'refresh') {
+    loadCommunity();
+    output.push('Refreshing live community data...');
+  } else if (command === 'clear') {
+    setTerminalLines([]);
     setTerminalInput('');
+    return;
+  } else {
+    output.push(`command not found: ${rawCommand}`, 'Type "help" for available commands.');
   }
+
+  setTerminalLines((prev) => [...prev, ...output]);
+  setTerminalInput('');
+}
 
   function handleTerminalKeyDown(event) {
     if (event.key === 'Enter') {
+      console.log("Enter pressed, command:", terminalInput);
       runCommand(terminalInput);
     }
   }
@@ -864,7 +771,62 @@ export default function StudentCommunityPage() {
           transform: translateY(-1px);
         }
 
-        .profile-mini {
+        .auth-terminal-backdrop { position: fixed; inset: 0; z-index: 1000; display:grid; place-items:center; padding:20px; background:rgba(0,0,0,.78); backdrop-filter:blur(12px); }
+  .auth-terminal-card { width:min(720px,100%); max-height:92vh; overflow:auto; border:1px solid rgba(141,255,202,.25); border-radius:22px; background:linear-gradient(180deg,rgba(8,20,18,.99),rgba(4,11,10,.99)); box-shadow:0 35px 120px rgba(0,0,0,.58),0 0 70px rgba(141,255,202,.06); }
+  .auth-terminal-chrome { height:48px; display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.018); }
+  .auth-terminal-dots { display:flex; gap:6px; }
+  .auth-terminal-dots span { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.2); }
+  .auth-terminal-path { flex:1; color:var(--muted); font:10px "SFMono-Regular",Consolas,monospace; }
+  .auth-close { width:34px; height:34px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.02); color:var(--soft); font-size:20px; }
+  .auth-terminal-body { padding:28px; }
+  .auth-kicker,.auth-command { color:var(--accent); font:700 11px "SFMono-Regular",Consolas,monospace; letter-spacing:.06em; }
+  .auth-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-top:8px; }
+  .auth-title-row h2 { margin:0; font-size:clamp(24px,4vw,34px); letter-spacing:-.045em; }
+  .auth-title-row p,.auth-stage-copy { color:var(--muted); line-height:1.65; font-size:12px; margin:8px 0 0; }
+  .auth-status { border:1px solid rgba(141,255,202,.2); color:var(--accent); border-radius:999px; padding:6px 9px; font:700 9px "SFMono-Regular",Consolas,monospace; }
+  .auth-progress { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:26px 0 30px; }
+  .auth-progress-step { position:relative; display:flex; align-items:center; gap:8px; color:#506a63; font:700 9px "SFMono-Regular",Consolas,monospace; }
+  .auth-progress-step:not(:last-child)::after { content:""; position:absolute; left:30px; right:-8px; top:13px; height:1px; background:rgba(141,255,202,.09); z-index:0; }
+  .auth-progress-node { position:relative; z-index:1; width:27px; height:27px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--line); background:#07110f; }
+  .auth-progress-step.done { color:var(--soft); }
+  .auth-progress-step.current { color:var(--accent); }
+  .auth-progress-step.current .auth-progress-node,.auth-progress-step.done .auth-progress-node { border-color:rgba(141,255,202,.35); color:var(--accent); box-shadow:0 0 18px rgba(141,255,202,.08); }
+  .auth-stage { border:1px solid var(--line); border-radius:17px; padding:22px; background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.012)); }
+  .auth-stage h3 { margin:8px 0 0; font-size:19px; letter-spacing:-.025em; }
+  .auth-role-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+  .auth-role-card { min-height:88px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.018); color:var(--text); display:grid; grid-template-columns:42px 1fr auto; align-items:center; gap:12px; padding:13px; text-align:left; transition:.2s ease; }
+  .auth-role-card:hover { transform:translateY(-2px); border-color:rgba(141,255,202,.3); background:rgba(141,255,202,.045); }
+  .auth-role-guest { grid-column:1/-1; }
+  .auth-role-icon { width:38px; height:38px; display:grid; place-items:center; border-radius:11px; border:1px solid rgba(141,255,202,.18); color:var(--accent); background:rgba(141,255,202,.05); font:800 10px "SFMono-Regular",Consolas,monospace; }
+  .auth-role-card strong,.auth-role-card small { display:block; }
+  .auth-role-card strong { font-size:11px; letter-spacing:.06em; }
+  .auth-role-card small { color:var(--muted); font-size:10px; margin-top:4px; }
+  .auth-arrow { color:var(--accent); }
+  .auth-field-label { display:block; margin-top:20px; color:var(--muted); font:700 9px "SFMono-Regular",Consolas,monospace; letter-spacing:.12em; }
+  .auth-input-shell { margin-top:8px; display:flex; align-items:center; gap:10px; border:1px solid rgba(141,255,202,.2); border-radius:12px; background:#030908; padding:0 13px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.01); }
+  .auth-input-shell span { color:var(--accent); font-family:monospace; }
+  .auth-input-shell input { flex:1; min-width:0; height:50px; border:0; outline:0; background:transparent; color:var(--text); font:14px "SFMono-Regular",Consolas,monospace; }
+  .auth-input-shell input::placeholder { color:#466057; }
+  .auth-derived-email { margin-top:10px; color:var(--muted); font:10px "SFMono-Regular",Consolas,monospace; }
+  .auth-derived-email strong { color:var(--accent); }
+  .auth-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:20px; }
+  .guest-permissions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:18px; color:var(--soft); font:10px "SFMono-Regular",Consolas,monospace; }
+  .auth-identity-summary { display:grid; grid-template-columns:90px 1fr; gap:8px 12px; margin-top:18px; padding:14px; border:1px solid var(--line); border-radius:12px; background:#030908; font:10px "SFMono-Regular",Consolas,monospace; }
+  .auth-identity-summary span { color:var(--muted); }
+  .auth-identity-summary strong { color:var(--accent); overflow-wrap:anywhere; }
+  .otp-input { width:100%; min-height:58px; margin-top:10px; border:1px solid rgba(141,255,202,.2); border-radius:13px; background:#030908; color:var(--accent); outline:0; padding:0 16px; text-align:center; letter-spacing:.42em; font:800 24px "SFMono-Regular",Consolas,monospace; box-shadow:inset 0 0 0 1px rgba(255,255,255,.01); }
+  .otp-input:focus { border-color:rgba(141,255,202,.5); box-shadow:0 0 0 3px rgba(141,255,202,.06); }
+  .otp-input::placeholder { color:#466057; letter-spacing:.3em; }
+  .otp-message { margin-top:12px; padding:10px 12px; border:1px solid rgba(141,255,202,.12); border-radius:10px; color:var(--soft); background:rgba(141,255,202,.035); font:10px "SFMono-Regular",Consolas,monospace; line-height:1.5; }
+  .otp-error { margin-top:12px; padding:10px 12px; border:1px solid rgba(255,133,133,.2); border-radius:10px; color:#ffabab; background:rgba(255,133,133,.045); font:10px "SFMono-Regular",Consolas,monospace; line-height:1.5; }
+  .otp-resend { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; color:var(--muted); font:10px "SFMono-Regular",Consolas,monospace; }
+  .otp-resend button { border:0; background:transparent; color:var(--accent); padding:0; font:inherit; font-weight:800; cursor:pointer; }
+  .otp-resend button:disabled { color:#466057; cursor:not-allowed; }
+  .otp-verify-button { width:100%; min-height:56px; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:12px; padding:0 16px; border:1px solid rgba(141,255,202,.26); border-radius:13px; background:rgba(141,255,202,.09); color:var(--accent); font-size:12px; font-weight:850; }
+  .otp-verify-button:hover:not(:disabled) { background:rgba(141,255,202,.14); transform:translateY(-1px); }
+  .otp-verify-button:disabled { opacity:.6; cursor:wait; }
+  .auth-terminal-footer { margin-top:18px; color:#466057; text-align:center; font:9px "SFMono-Regular",Consolas,monospace; }
+  .profile-mini {
           display: flex;
           align-items: center;
           gap: 9px;
@@ -2105,6 +2067,80 @@ export default function StudentCommunityPage() {
           margin-top: 18px;
         }
 
+        .notification-backdrop {
+          position: fixed;
+          inset: 72px 0 0;
+          z-index: 44;
+          border: 0;
+          background: rgba(0, 0, 0, 0.18);
+        }
+
+        .notification-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notification-close {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 auto;
+        }
+
+        .community-loading-bar {
+          position: fixed;
+          top: 72px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          z-index: 70;
+          overflow: hidden;
+          background: rgba(141, 255, 202, 0.04);
+          pointer-events: none;
+        }
+
+        .community-loading-bar span:first-child {
+          display: block;
+          width: 35%;
+          height: 100%;
+          background: var(--accent);
+          box-shadow: 0 0 14px rgba(141, 255, 202, 0.45);
+          animation: communityLoading 1.1s ease-in-out infinite;
+        }
+
+        @keyframes communityLoading {
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(320%); }
+        }
+
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        .mobile-nav-count {
+          position: absolute;
+          top: 4px;
+          right: 18%;
+          min-width: 14px;
+          height: 14px;
+          padding: 0 4px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          background: var(--accent);
+          color: #06120d;
+          font-size: 7px;
+          font-weight: 900;
+        }
+
         .notification-panel {
           position: fixed;
           top: 62px;
@@ -2297,6 +2333,9 @@ export default function StudentCommunityPage() {
           .topbar {
             padding: 0 13px;
             height: 64px;
+
+           .notification-backdrop { inset: 64px 0 0; }
+           .community-loading-bar { top: 64px; }
           }
 
           .layout {
@@ -2407,6 +2446,7 @@ export default function StudentCommunityPage() {
           }
 
           .mobile-nav-item {
+             position: relative;
             border: 0;
             background: transparent;
             color: var(--muted);
@@ -2447,1547 +2487,611 @@ export default function StudentCommunityPage() {
         }
       `}</style>
 
-      {/* =====================================================
-          TOP BAR
-      ===================================================== */}
-
       <header className="topbar">
-        <div className="brand">
-          <button
-            className="icon-button mobile-menu-btn"
-            onClick={() => setMobileMenu((value) => !value)}
-            aria-label="Open menu"
-          >
-            ☰
-          </button>
-
+        <button className="brand" onClick={() => navigate('dashboard')} aria-label="BSIE Community home">
           <div className="brand-mark">&gt;_</div>
-
           <div className="brand-copy">
             <div className="brand-title">BSIE Community</div>
             <div className="brand-path">BSIE://community</div>
           </div>
-        </div>
+        </button>
 
         <div className="top-actions">
-          <button
-            className="icon-button"
-            onClick={() => setTerminalOpen(true)}
-            aria-label="Open terminal"
-          >
-            &gt;_
+          <button className="icon-button" onClick={() => setTerminalOpen(true)} aria-label="Open terminal">&gt;_</button>
+          <button className="icon-button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications">
+            ◉{notifications.some((item) => !item.read) ? <span className="notification-dot" /> : null}
           </button>
 
           <button
-            className="icon-button"
-            onClick={() => setNotificationOpen((value) => !value)}
-            aria-label="Notifications"
+            className="profile-mini"
+            onClick={() => {
+              if (!user) openAuthModal();
+              else if (isInstructor) window.location.href = '/instructor';
+              else navigate('dashboard');
+            }}
+            title={user ? 'Open your profile / dashboard' : 'Sign in'}
           >
-            ◉
-          </button>
-
-          <div className="profile-mini">
-            <div className="avatar">WA</div>
+            <div className="avatar">{user?.avatarUrl ? <img src={user.avatarUrl} alt="" /> : initials(user?.name)}</div>
             <div>
-              <div className="profile-name">@walaa</div>
-              <div className="profile-level">LEVEL {level} · #3</div>
+              <div className="profile-name">{user?.username || user?.name || 'Guest'}</div>
+              <div className="profile-level">
+                {user ? `${String(user.role || 'student').toUpperCase()} · LEVEL ${level || '—'}` : 'STUDENT · SIGN IN'}
+              </div>
             </div>
-          </div>
+          </button>
         </div>
       </header>
 
       {notificationOpen && (
-        <div className="notification-panel">
-          <div className="panel-header">
-            <div>
-              <h3 className="panel-title">Notifications</h3>
-              <div className="panel-subtitle">Your latest community activity</div>
+        <>
+          <button className="notification-backdrop" aria-label="Close notifications" onClick={() => setNotificationOpen(false)} />
+          <div className="notification-panel">
+            <div className="panel-header">
+              <div>
+                <h3 className="panel-title">Notifications</h3>
+                <div className="panel-subtitle">Live activity from your account</div>
+              </div>
+              <div className="notification-actions">
+                {user && <button className="btn" onClick={() => mutate('/community/notifications/read-all')}>Mark all read</button>}
+                <button className="icon-button notification-close" onClick={() => setNotificationOpen(false)} aria-label="Close notifications">×</button>
+              </div>
             </div>
+            {notifications.length ? notifications.map((item) => (
+              <div className="notification-item" key={item.id}>
+                <div className="notification-title">{item.title}</div>
+                <div className="notification-copy">{item.message}</div>
+                <div className="activity-time">{formatDate(item.createdAt)}</div>
+              </div>
+            )) : (
+              <EmptyState icon="◉" title="No notifications" text={user ? 'You are all caught up.' : 'Sign in to receive community notifications.'} />
+            )}
           </div>
-
-          <div className="notification-item">
-            <div className="notification-title">Challenge approved ✓</div>
-            <div className="notification-copy">
-              Your submission for Clean Code Challenge has been approved.
-            </div>
-          </div>
-
-          <div className="notification-item">
-            <div className="notification-title">Team invitation</div>
-            <div className="notification-copy">
-              @ahmed invited you to join the IoT Mavericks team.
-            </div>
-          </div>
-
-          <div className="notification-item">
-            <div className="notification-title">New achievement</div>
-            <div className="notification-copy">
-              You are only 320 XP away from Level 7.
-            </div>
-          </div>
-        </div>
+        </>
       )}
-
-      {/* =====================================================
-          LAYOUT
-      ===================================================== */}
-
       <div className="layout">
         <aside className={`sidebar ${mobileMenu ? 'open' : ''}`}>
           <div className="terminal-label">~/student/community</div>
-
           <nav className="nav">
             {navItems.map((item) => (
-              <button
-                key={item.id}
-                className={`nav-item ${
-                  activeSection === item.id ? 'active' : ''
-                }`}
-                onClick={() => navigate(item.id)}
-              >
+              <button key={item.id} className={`nav-item ${activeSection === item.id ? 'active' : ''}`} onClick={() => navigate(item.id)}>
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
-
-                {item.count && <span className="nav-count">{item.count}</span>}
+                {item.count ? <span className="nav-count">{item.count}</span> : null}
               </button>
             ))}
+            {isInstructor && (
+              <button className={`nav-item ${activeSection === 'instructor' ? 'active' : ''}`} onClick={() => { window.location.href = '/instructor'; }}>
+                <span className="nav-icon">⌘</span>
+                <span className="nav-label">Instructor Console</span>
+              </button>
+            )}
           </nav>
 
           <div className="sidebar-terminal">
-            <div className="sidebar-terminal-title">
-              &gt; system.status()
-            </div>
-
+            <div className="sidebar-terminal-title">&gt; system.status()</div>
             <p>
-              connection: online
+              connection: {loading ? 'checking' : 'online'}
               <br />
-              community: active
+              community: {community ? 'active' : 'offline'}
               <br />
-              students: 428
+              students: {stats.students ?? '—'}
               <br />
-              challenges: 24
+              challenges: {stats.challenges ?? challenges.length}
               <br />
-              status: healthy
+              status: {loading ? 'syncing' : 'healthy'}
             </p>
           </div>
         </aside>
 
         <section className="main">
-          {/* =================================================
-              DASHBOARD
-          ================================================= */}
-
           {activeSection === 'dashboard' && (
             <>
               <section className="hero">
                 <div className="terminal-orb" />
-
                 <div className="hero-grid">
                   <div>
-                    <div className="hero-kicker">
-                      &gt; system.boot(student_community)
-                    </div>
-
-                    <h1>
-                      Build.
-                      <br />
-                      Learn.
-                      <br />
-                      <span>Connect.</span>
-                      <span className="terminal-cursor" />
-                    </h1>
-
+                    <div className="hero-kicker">&gt; system.boot(student_community)</div>
+                    <h1>Build.<br />Learn.<br /><span>Connect.</span><span className="terminal-cursor" /></h1>
                     <p className="hero-copy">
-                      Welcome to the BSIE Student Community — a technical
-                      ecosystem where students can solve challenges, build
-                      projects, join teams, share ideas, and grow together.
+                      Welcome to the BSIE Student Community — a live technical ecosystem for challenges, projects, teams, ideas and academic growth.
                     </p>
-
                     <div className="hero-actions">
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => navigate('challenges')}
-                      >
-                        Explore Challenges
+                      <button className="btn btn-primary" onClick={() => user ? navigate('challenges') : openAuthModal()}>
+                        {user ? 'Explore Challenges' : 'Sign in with UTB'}
                       </button>
-
-                      <button
-                        className="btn btn-ghost"
-                        onClick={() => setTerminalOpen(true)}
-                      >
-                        Open Terminal &gt;_
-                      </button>
+                      <button className="btn btn-ghost" onClick={() => setTerminalOpen(true)}>Open Terminal &gt;_</button>
                     </div>
                   </div>
 
                   <div className="hero-terminal">
-                    <div className="terminal-top">
-                      <span className="dot" />
-                      <span className="dot" />
-                      <span className="dot" />
-                      <span className="terminal-name">
-                        bsie-community — terminal
-                      </span>
-                    </div>
-
+                    <div className="terminal-top"><span className="dot" /><span className="dot" /><span className="dot" /><span className="terminal-name">bsie-community — terminal</span></div>
                     <div className="terminal-body">
-                      <div className="terminal-line-dim">
-                        $ whoami
-                      </div>
-                      <div className="terminal-line-accent">
-                        student_01
-                      </div>
-
+                      <div className="terminal-line-dim">$ whoami</div>
+                      <div className="terminal-line-accent">{user?.username || user?.email || 'guest'}</div>
                       <br />
-
-                      <div className="terminal-line-dim">
-                        $ status
-                      </div>
-                      <div>level: 06</div>
-                      <div>xp: 2180</div>
-                      <div>streak: 7 days 🔥</div>
-                      <div>rank: #3</div>
-
+                      <div className="terminal-line-dim">$ status</div>
+                      <div>role: {user?.role || 'guest'}</div>
+                      <div>level: {user?.level ?? '—'}</div>
+                      <div>xp: {user?.xp ?? '—'}</div>
+                      <div>streak: {user?.streak != null ? `${user.streak} days` : '—'}</div>
+                      <div>rank: {user?.rank ?? '—'}</div>
                       <br />
-
-                      <div className="terminal-line-accent">
-                        System ready.
-                      </div>
-
-                      <div className="terminal-line-dim">
-                        Type "help" for commands.
-                      </div>
+                      <div className="terminal-line-accent">{user ? 'System ready.' : 'Authentication required.'}</div>
+                      <div className="terminal-line-dim">{user ? 'Type "help" for commands.' : 'Click Guest to sign in.'}</div>
                     </div>
                   </div>
                 </div>
               </section>
 
               <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-label">XP</div>
-                  <div className="stat-value">2,180</div>
-                  <div className="stat-extra">+180 this week</div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Challenges</div>
-                  <div className="stat-value">14</div>
-                  <div className="stat-extra">completed</div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Projects</div>
-                  <div className="stat-value">06</div>
-                  <div className="stat-extra">showcased</div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Rank</div>
-                  <div className="stat-value">#03</div>
-                  <div className="stat-extra">BSIE students</div>
-                </div>
+                {[
+                  ['XP', user?.xp ?? '—', user?.weeklyXp != null ? `+${user.weeklyXp} this week` : 'Live from account'],
+                  ['Challenges', user?.challengesCompleted ?? '—', 'completed'],
+                  ['Projects', user?.projectsCount ?? '—', 'showcased'],
+                  ['Rank', user?.rank ?? '—', 'BSIE students'],
+                ].map(([label, value, extra]) => (
+                  <div className="stat-card" key={label}>
+                    <div className="stat-label">{label}</div>
+                    <div className="stat-value">{value}</div>
+                    <div className="stat-extra">{extra}</div>
+                  </div>
+                ))}
               </div>
 
               <div className="dashboard-grid section-spacer">
                 <div className="panel">
                   <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Your Progress</h3>
-                      <div className="panel-subtitle">
-                        Keep building your technical profile
-                      </div>
-                    </div>
-
-                    <Pill tone="green">LEVEL {level}</Pill>
+                    <div><h3 className="panel-title">Your Progress</h3><div className="panel-subtitle">Calculated from your real account activity</div></div>
+                    <Pill tone="green">LEVEL {level || '—'}</Pill>
                   </div>
-
                   <div className="panel-body">
-                    <div className="level-box">
-                      <div className="level-row">
-                        <div>
-                          <div className="level-caption">CURRENT LEVEL</div>
-                          <div className="level-number">{level}</div>
+                    {user ? (
+                      <div className="level-box">
+                        <div className="level-row">
+                          <div><div className="level-caption">CURRENT LEVEL</div><div className="level-number">{level}</div></div>
+                          <div className="level-xp">{xp} / {nextLevelXP || '—'} XP</div>
                         </div>
-
-                        <div className="level-xp">
-                          {userXP} / {nextLevelXP} XP
-                        </div>
+                        <div className="level-progress"><ProgressBar value={levelProgress} /></div>
+                        <div className="streak"><span>🔥</span><strong>{user.streak ?? 0} day streak</strong><span>Keep it going!</span></div>
                       </div>
-
-                      <div className="level-progress">
-                        <ProgressBar value={levelProgress} />
-                      </div>
-
-                      <div className="streak">
-                        <span>🔥</span>
-                        <strong>7 day streak</strong>
-                        <span>Keep it going!</span>
-                      </div>
-
-                      <div className="calendar">
-                        {Array.from({ length: 35 }).map((_, index) => (
-                          <span
-                            key={index}
-                            className={`day ${
-                              index % 3 === 0 || index > 28 ? 'active' : ''
-                            } ${index > 30 ? 'strong' : ''}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    ) : (
+                      <EmptyState icon="↗" title="Sign in to track progress" text="XP, levels, streaks and rank are calculated from your real academic activity." action={<button className="btn btn-primary" onClick={openAuthModal}>Sign in</button>} />
+                    )}
                   </div>
                 </div>
 
                 <div className="panel">
                   <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Daily Challenge</h3>
-                      <div className="panel-subtitle">
-                        Small task. Real progress.
-                      </div>
-                    </div>
-
-                    <Pill tone="orange">+75 XP</Pill>
+                    <div><h3 className="panel-title">Daily Challenge</h3><div className="panel-subtitle">Published by the academic system</div></div>
+                    {dailyChallenge?.reward != null && <Pill tone="orange">+{dailyChallenge.reward} XP</Pill>}
                   </div>
-
                   <div className="panel-body">
-                    <div className="daily-card">
-                      <div className="daily-top">
-                        <div>
-                          <Pill tone="orange">15 MIN</Pill>
-                          <div className="daily-title">
-                            Fix the Bug 🐛
-                          </div>
+                    {dailyChallenge ? (
+                      <div className="daily-card">
+                        <div className="daily-top">
+                          <div><Pill tone="orange">{dailyChallenge.time || '—'}</Pill><div className="daily-title">{dailyChallenge.title}</div></div>
+                          <div className="daily-icon">{dailyChallenge.icon || '⚡'}</div>
                         </div>
-
-                        <div className="daily-icon">🐛</div>
-                      </div>
-
-                      <div className="daily-copy">
-                        Find the hidden logic error in a small Python function
-                        and submit the corrected version.
-                      </div>
-
-                      <div className="daily-meta">
-                        <Pill>#Python</Pill>
-                        <Pill>#Debugging</Pill>
-                        <Pill>Beginner</Pill>
-                      </div>
-
-                      <button
-                        className="btn btn-primary"
-                        style={{ marginTop: 16, width: '100%' }}
-                        onClick={() => {
-                          setSelectedChallenge(CHALLENGES[5]);
-                        }}
-                      >
-                        Start Daily Challenge
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="two-column section-spacer">
-                <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Recommended for You</h3>
-                      <div className="panel-subtitle">
-                        Based on your activity
-                      </div>
-                    </div>
-
-                    <button
-                      className="btn"
-                      onClick={() => navigate('challenges')}
-                    >
-                      View all
-                    </button>
-                  </div>
-
-                  <div className="panel-body">
-                    {CHALLENGES.slice(0, 3).map((challenge) => (
-                      <div
-                        key={challenge.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 11,
-                          padding: '10px 0',
-                          borderTop: '1px solid var(--line)',
-                        }}
-                      >
-                        <div className="challenge-icon">
-                          {challenge.icon}
-                        </div>
-
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 800,
-                            }}
-                          >
-                            {challenge.title}
-                          </div>
-
-                          <div
-                            style={{
-                              color: 'var(--muted)',
-                              fontSize: 9,
-                              marginTop: 3,
-                            }}
-                          >
-                            {challenge.category} · {challenge.time}
-                          </div>
-                        </div>
-
-                        <Pill tone="green">
-                          +{challenge.reward}
-                        </Pill>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Community Activity</h3>
-                      <div className="panel-subtitle">
-                        What students are building
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="activity-list">
-                    {ACTIVITY.slice(0, 4).map((activity, index) => (
-                      <div className="activity-item" key={index}>
-                        <div className="activity-icon">
-                          {activity.icon}
-                        </div>
-
-                        <div>
-                          <div className="activity-text">
-                            <strong>{activity.user}</strong>{' '}
-                            {activity.action}{' '}
-                            <strong>{activity.target}</strong>
-                          </div>
-
-                          <div className="activity-time">
-                            {activity.time}
-                          </div>
-                        </div>
-
-                        <div className="activity-xp">{activity.xp}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              CHALLENGES
-          ================================================= */}
-
-          {activeSection === 'challenges' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; challenges.list()</div>
-                  <h1 className="section-title">Challenges</h1>
-                  <p className="section-description">
-                    Pick a challenge, build a skill, earn XP, and prove what
-                    you can do.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    showToast('Challenge creation will be available soon.')
-                  }
-                >
-                  + Create Challenge
-                </button>
-              </div>
-
-              <div className="challenge-toolbar">
-                <input
-                  className="search"
-                  placeholder="Search challenges, skills, technologies..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-
-              <div className="filter-row">
-                {[
-                  'All',
-                  'Quick Win',
-                  'Technical',
-                  'Hardcore',
-                  'Collaborative Sprint',
-                  'Security',
-                  'Programming',
-                  'Networking',
-                  'AI',
-                  'IoT',
-                  'UI/UX',
-                ].map((filter) => (
-                  <button
-                    key={filter}
-                    className={`filter ${
-                      challengeFilter === filter ? 'active' : ''
-                    }`}
-                    onClick={() => setChallengeFilter(filter)}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-
-              <div className="challenge-grid section-spacer">
-                {filteredChallenges.map((challenge) => {
-                  const accepted =
-                    challengeState[challenge.id] === 'accepted';
-
-                  return (
-                    <article className="challenge-card" key={challenge.id}>
-                      <div className="challenge-top">
-                        <div className="challenge-icon">
-                          {challenge.icon}
-                        </div>
-
-                        <div style={{ textAlign: 'right' }}>
-                          <div className="challenge-type">
-                            {challenge.type}
-                          </div>
-
-                          <div style={{ marginTop: 7 }}>
-                            <Difficulty
-                              level={challenge.difficultyLevel}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <h3 className="challenge-title">
-                        {challenge.title}
-                      </h3>
-
-                      <p className="challenge-description">
-                        {challenge.description}
-                      </p>
-
-                      <div className="challenge-meta">
-                        <Pill tone="green">
-                          {challenge.difficulty}
-                        </Pill>
-
-                        <Pill>⏱ {challenge.time}</Pill>
-
-                        <Pill tone="blue">{challenge.mode}</Pill>
-                      </div>
-
-                      <div className="challenge-skills">
-                        {challenge.skills.map((skill) => (
-                          <span className="skill-tag" key={skill}>
-                            #{skill.replaceAll(' ', '')}
-                          </span>
-                        ))}
-                      </div>
-
-                      {challenge.progress > 0 && (
-                        <div style={{ marginTop: 14 }}>
-                          <ProgressBar value={challenge.progress} />
-                        </div>
-                      )}
-
-                      <div className="challenge-footer">
-                        <div>
-                          <div className="reward">
-                            +{challenge.reward} XP
-                          </div>
-
-                          <div
-                            style={{
-                              color: 'var(--muted)',
-                              fontSize: 8,
-                              marginTop: 4,
-                            }}
-                          >
-                            👥 {challenge.participants}/
-                            {challenge.maxParticipants}
-                          </div>
-                        </div>
-
-                        <button
-                          className={`accept-btn ${
-                            accepted ? 'accepted' : ''
-                          }`}
-                          onClick={() => {
-                            if (accepted) {
-                              setSelectedChallenge(challenge);
-                            } else {
-                              acceptChallenge(challenge);
-                            }
-                          }}
-                        >
-                          {accepted ? 'VIEW CHALLENGE' : 'ACCEPT'}
+                        <div className="daily-copy">{dailyChallenge.description}</div>
+                        <div className="daily-meta">{(dailyChallenge.skills || []).slice(0, 3).map((skill) => <Pill key={skill}>#{skill}</Pill>)}</div>
+                        <button className="btn btn-primary" style={{ marginTop: 16, width: '100%' }} disabled={!user || actionLoading} onClick={() => acceptChallenge(dailyChallenge)}>
+                          {user ? 'Start Daily Challenge' : 'Sign in to Start'}
                         </button>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              {filteredChallenges.length === 0 && (
-                <EmptyState
-                  icon="⌕"
-                  title="No challenges found"
-                  text="Try another search or remove the current filters."
-                />
-              )}
-            </>
-          )}
-
-          {/* =================================================
-              TASKS
-          ================================================= */}
-
-          {activeSection === 'tasks' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; tasks.status()</div>
-                  <h1 className="section-title">Tasks</h1>
-                  <p className="section-description">
-                    Small actionable missions that move your skills forward.
-                  </p>
-                </div>
-              </div>
-
-              <div className="two-column">
-                <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">My Tasks</h3>
-                      <div className="panel-subtitle">
-                        {TASKS.filter(
-                          (task) => taskState[task.id] === 'Completed'
-                        ).length}{' '}
-                        completed
-                      </div>
-                    </div>
-
-                    <Pill tone="green">5 TASKS</Pill>
-                  </div>
-
-                  <div className="task-list">
-                    {TASKS.map((task) => {
-                      const completed =
-                        taskState[task.id] === 'Completed';
-
-                      return (
-                        <div className="task-row" key={task.id}>
-                          <div
-                            className={`task-check ${
-                              completed ? 'done' : ''
-                            }`}
-                          >
-                            {completed ? '✓' : '○'}
-                          </div>
-
-                          <div>
-                            <div className="task-name">
-                              {task.title}
-                            </div>
-
-                            <div className="task-meta">
-                              <span>{task.category}</span>
-                              <span>•</span>
-                              <span>{task.skill}</span>
-                              <span>•</span>
-                              <span>{task.time}</span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="task-xp">+{task.xp} XP</div>
-
-                            {!completed && (
-                              <button
-                                className="accept-btn"
-                                style={{ marginTop: 6 }}
-                                onClick={() => updateTask(task)}
-                              >
-                                COMPLETE
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    ) : (
+                      <EmptyState icon="⚡" title="No daily challenge" text="No challenge has been published for today." />
+                    )}
                   </div>
                 </div>
-
-                <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Mission Structure</h3>
-                      <div className="panel-subtitle">
-                        How tasks connect to challenges
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="panel-body">
-                    <div className="level-box">
-                      <div
-                        style={{
-                          fontFamily:
-                            '"SFMono-Regular", Consolas, monospace',
-                          color: 'var(--accent)',
-                          fontSize: 11,
-                        }}
-                      >
-                        challenge://104
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop: 14,
-                          display: 'grid',
-                          gap: 8,
-                        }}
-                      >
-                        {[
-                          ['✓', 'Research existing portal', true],
-                          ['✓', 'Create user flow', true],
-                          ['○', 'Build wireframe', false],
-                          ['○', 'Create prototype', false],
-                          ['○', 'Present solution', false],
-                        ].map(([icon, name, done]) => (
-                          <div
-                            key={name}
-                            style={{
-                              display: 'flex',
-                              gap: 9,
-                              alignItems: 'center',
-                              padding: '8px 0',
-                              borderTop: '1px solid var(--line)',
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: done
-                                  ? 'var(--accent)'
-                                  : 'var(--muted)',
-                              }}
-                            >
-                              {icon}
-                            </span>
-
-                            <span
-                              style={{
-                                fontSize: 10,
-                                color: done
-                                  ? 'var(--soft)'
-                                  : 'var(--muted)',
-                              }}
-                            >
-                              {name}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              TEAMS
-          ================================================= */}
-
-          {activeSection === 'teams' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; teams.find()</div>
-                  <h1 className="section-title">Teams</h1>
-                  <p className="section-description">
-                    Find people with complementary skills and build something
-                    together.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    showToast('Team creation flow will open soon.')
-                  }
-                >
-                  + Create Team
-                </button>
-              </div>
-
-              <div className="team-grid">
-                {TEAMS.map((team) => (
-                  <article className="team-card" key={team.id}>
-                    <div className="card-icon">👥</div>
-
-                    <h3 className="card-title">{team.name}</h3>
-
-                    <p className="card-description">
-                      Challenge:{' '}
-                      <strong style={{ color: 'var(--text)' }}>
-                        {team.challenge}
-                      </strong>
-                      <br />
-                      {team.status}
-                    </p>
-
-                    <div className="tag-list">
-                      {team.skills.map((skill) => (
-                        <Pill key={skill}>{skill}</Pill>
-                      ))}
-                    </div>
-
-                    <div className="card-footer">
-                      <span className="member-count">
-                        {team.members}/{team.max} members
-                      </span>
-
-                      <button
-                        className={`accept-btn ${
-                          team.members >= team.max ? '' : 'accepted'
-                        }`}
-                        disabled={team.members >= team.max}
-                        onClick={() => joinTeam(team)}
-                      >
-                        {team.members >= team.max
-                          ? 'FULL'
-                          : 'JOIN TEAM'}
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              PROJECTS
-          ================================================= */}
-
-          {activeSection === 'projects' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; projects.explore()</div>
-                  <h1 className="section-title">Student Builds</h1>
-                  <p className="section-description">
-                    Showcase what you built. Discover what other students are
-                    creating.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    showToast('Project publishing flow will open soon.')
-                  }
-                >
-                  + Publish Project
-                </button>
-              </div>
-
-              <div className="project-grid">
-                {PROJECTS.map((project) => (
-                  <article className="project-card" key={project.id}>
-                    <div className="card-icon">{project.icon}</div>
-
-                    <h3 className="card-title">{project.title}</h3>
-
-                    <p className="card-description">
-                      {project.description}
-                    </p>
-
-                    <div className="tag-list">
-                      {project.tech.map((tech) => (
-                        <Pill tone="blue" key={tech}>
-                          {tech}
-                        </Pill>
-                      ))}
-                    </div>
-
-                    <div className="project-author">
-                      built by {project.author}
-                    </div>
-
-                    <div className="card-footer">
-                      <div className="project-stats">
-                        <span>♡ {project.likes}</span>
-                        <span>◌ {project.comments}</span>
-                      </div>
-
-                      <Pill tone="green">{project.status}</Pill>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              IDEAS
-          ================================================= */}
-
-          {activeSection === 'ideas' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; ideas.community()</div>
-                  <h1 className="section-title">Ideas</h1>
-                  <p className="section-description">
-                    Turn student ideas into real projects and future
-                    challenges.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    showToast('Idea submission flow will open soon.')
-                  }
-                >
-                  + Submit Idea
-                </button>
-              </div>
-
-              <div className="idea-grid">
-                {IDEAS.map((idea) => (
-                  <article className="idea-card" key={idea.id}>
-                    <Pill tone="purple">{idea.category}</Pill>
-
-                    <h3 className="card-title">{idea.title}</h3>
-
-                    <p className="card-description">
-                      {idea.description}
-                    </p>
-
-                    <div className="project-author">
-                      proposed by {idea.author}
-                    </div>
-
-                    <div className="idea-votes">
-                      <button
-                        className="vote-button"
-                        onClick={() =>
-                          showToast(`Upvoted "${idea.title}"`)
-                        }
-                      >
-                        ▲
-                      </button>
-
-                      <span className="vote-count">{idea.votes}</span>
-
-                      <span
-                        style={{
-                          color: 'var(--muted)',
-                          fontSize: 9,
-                        }}
-                      >
-                        {idea.interested} interested
-                      </span>
-                    </div>
-
-                    <div className="card-footer">
-                      <span className="member-count">
-                        Idea → Challenge
-                      </span>
-
-                      <button
-                        className="accept-btn"
-                        onClick={() =>
-                          showToast(
-                            `You joined "${idea.title}".`
-                          )
-                        }
-                      >
-                        JOIN IDEA
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              LEADERBOARD
-          ================================================= */}
-
-          {activeSection === 'leaderboard' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; leaderboard.show()</div>
-                  <h1 className="section-title">Leaderboard</h1>
-                  <p className="section-description">
-                    Competition is optional. Progress is personal.
-                  </p>
-                </div>
-              </div>
-
-              <div className="filter-row" style={{ marginBottom: 14 }}>
-                <button className="filter active">GLOBAL</button>
-                <button className="filter">MY MAJOR</button>
-                <button className="filter">MY YEAR</button>
-                <button className="filter">MY TEAM</button>
-              </div>
-
-              <div className="leaderboard">
-                {LEADERBOARD.map((person) => (
-                  <div
-                    className={`leader-row ${
-                      person.username === '@walaa' ? 'you' : ''
-                    }`}
-                    key={person.rank}
-                  >
-                    <div className="leader-rank">
-                      {person.rank === 1
-                        ? '🥇'
-                        : person.rank === 2
-                        ? '🥈'
-                        : person.rank === 3
-                        ? '🥉'
-                        : `#${person.rank}`}
-                    </div>
-
-                    <div className="leader-person">
-                      <div className="leader-avatar">
-                        {person.name.slice(0, 2).toUpperCase()}
-                      </div>
-
-                      <div>
-                        <div className="leader-name">
-                          {person.name}
-                          {person.username === '@walaa' && (
-                            <span
-                              style={{
-                                color: 'var(--accent)',
-                                marginLeft: 7,
-                                fontSize: 8,
-                              }}
-                            >
-                              YOU
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="leader-username">
-                          {person.username}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="leader-level">
-                      LEVEL {person.level}
-                    </div>
-
-                    <div className="leader-xp">
-                      {person.xp.toLocaleString()} XP
-                    </div>
-                  </div>
-                ))}
               </div>
 
               <div className="two-column section-spacer">
                 <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Your Reputation</h3>
-                      <div className="panel-subtitle">
-                        Quality of your community contribution
-                      </div>
-                    </div>
-                  </div>
-
+                  <div className="panel-header"><div><h3 className="panel-title">Recommended for You</h3><div className="panel-subtitle">Live challenges selected by the platform</div></div><button className="btn" onClick={() => navigate('challenges')}>View all</button></div>
                   <div className="panel-body">
-                    <div className="stat-value">780</div>
-
-                    <div style={{ marginTop: 7 }}>
-                      <ProgressBar value={78} />
-                    </div>
-
-                    <p
-                      style={{
-                        color: 'var(--muted)',
-                        fontSize: 10,
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      Reputation comes from helping students, reviewing
-                      projects, contributing resources, and creating useful
-                      ideas.
-                    </p>
+                    {challenges.slice(0, 3).map((challenge) => (
+                      <div key={challenge.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 0', borderTop: '1px solid var(--line)' }}>
+                        <div className="challenge-icon">{challenge.icon || '⚡'}</div>
+                        <div style={{ flex: 1 }}><div style={{ fontSize: 11, fontWeight: 800 }}>{challenge.title}</div><div style={{ color: 'var(--muted)', fontSize: 9, marginTop: 3 }}>{challenge.category || '—'} · {challenge.time || '—'}</div></div>
+                        <Pill tone="green">+{challenge.reward || 0}</Pill>
+                      </div>
+                    ))}
+                    {!challenges.length && <EmptyState icon="⚡" title="No challenges yet" text="Your instructors have not published any challenges." />}
                   </div>
                 </div>
 
                 <div className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3 className="panel-title">Your Badges</h3>
-                      <div className="panel-subtitle">
-                        4 / 6 featured badges
+                  <div className="panel-header"><div><h3 className="panel-title">Community Activity</h3><div className="panel-subtitle">Live activity from the platform</div></div></div>
+                  <div className="activity-list">
+                    {activity.slice(0, 5).map((item) => (
+                      <div className="activity-item" key={item.id}>
+                        <div className="activity-icon">{item.icon || '•'}</div>
+                        <div><div className="activity-text"><strong>{item.user || 'Member'}</strong> {item.action || ''} <strong>{item.target || ''}</strong></div><div className="activity-time">{item.time || formatDate(item.createdAt)}</div></div>
+                        {item.xp != null && <div className="activity-xp">{item.xp}</div>}
                       </div>
-                    </div>
+                    ))}
+                    {!activity.length && <EmptyState icon="◌" title="No activity yet" text="Community activity will appear here as members participate." />}
                   </div>
+                </div>
+              </div>
 
+              <div className="two-column section-spacer">
+                <div className="panel">
+                  <div className="panel-header"><div><h3 className="panel-title">Upcoming Deadlines</h3><div className="panel-subtitle">Academic and community deadlines</div></div></div>
                   <div className="panel-body">
-                    <div className="badge-grid">
-                      {BADGES.map((badge, index) => (
-                        <div className="badge-card" key={badge.name}>
-                          <div className="badge-icon">{badge.icon}</div>
+                    {deadlines.length ? deadlines.slice(0, 5).map((item) => (
+                      <div key={item.id} className="task-row">
+                        <div><strong>{item.title}</strong><div className="task-meta">{formatDate(item.deadline || item.dueAt)}</div></div>
+                        {item.xp != null && <Pill tone="orange">+{item.xp} XP</Pill>}
+                      </div>
+                    )) : <EmptyState icon="◷" title="No upcoming deadlines" text="Deadlines will appear when instructors publish academic work." />}
+                  </div>
+                </div>
 
-                          <div className="badge-name">
-                            {badge.name}
-                          </div>
-
-                          <div className="badge-description">
-                            {badge.description}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                <div className="panel">
+                  <div className="panel-header"><div><h3 className="panel-title">Verified Achievements</h3><div className="panel-subtitle">Earned from real platform activity</div></div><button className="btn" onClick={() => navigate('resources')}>Explore</button></div>
+                  <div className="panel-body">
+                    {badges.length ? (
+                      <div className="badge-grid">{badges.slice(0, 6).map((badge) => <div className={`badge-card ${badge.unlocked ? 'unlocked' : ''}`} key={badge.id}><div className="badge-icon">{badge.icon || '◇'}</div><div><strong>{badge.name}</strong><div>{badge.description || (badge.unlocked ? 'Verified achievement' : 'Locked')}</div></div></div>)}</div>
+                    ) : <EmptyState icon="◇" title="No badges yet" text="Verified badges appear when you meet their real criteria." />}
                   </div>
                 </div>
               </div>
             </>
           )}
-
-          {/* =================================================
-              EVENTS
-          ================================================= */}
-
-          {activeSection === 'events' && (
-            <>
-              <div className="section-header">
+{activeSection === 'challenges' && (
+            <section className="page-section">
+              <div className="section-command-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '24px' }}>
                 <div>
-                  <div className="eyebrow">&gt; events.upcoming()</div>
-                  <h1 className="section-title">Events</h1>
-                  <p className="section-description">
-                    Workshops, competitions, hackathons, and technical
-                    community activities.
-                  </p>
+                  <h2 style={{ margin: 0, fontSize: '22px' }}>Engineering Challenges</h2>
                 </div>
-              </div>
-
-              <div className="event-grid">
-                {EVENTS.map((event) => (
-                  <article className="event-card" key={event.id}>
-                    <div className="card-icon">{event.icon}</div>
-
-                    <div className="event-date" style={{ marginTop: 15 }}>
-                      {event.date}
-                    </div>
-
-                    <h3 className="card-title">{event.title}</h3>
-
-                    <div className="event-type">{event.type}</div>
-
-                    <div className="card-footer">
-                      <span className="event-attendees">
-                        👥 {event.attendees} attending
-                      </span>
-
-                      <button
-                        className="accept-btn accepted"
-                        onClick={() =>
-                          showToast(
-                            `Registered for ${event.title}.`
-                          )
-                        }
-                      >
-                        REGISTER
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* =================================================
-              RESOURCES
-          ================================================= */}
-
-          {activeSection === 'resources' && (
-            <>
-              <div className="section-header">
-                <div>
-                  <div className="eyebrow">&gt; resources.search()</div>
-                  <h1 className="section-title">Resources</h1>
-                  <p className="section-description">
-                    Cheat sheets, guides, references, tools, and student-made
-                    learning material.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    showToast('Resource upload will be available soon.')
-                  }
-                >
-                  + Share Resource
+                <button className="btn btn-primary" onClick={openAuthModal}>
+                  {user ? 'View Profile' : 'Sign in'}
                 </button>
               </div>
 
-              <div className="resource-grid">
-                {RESOURCES.map((resource) => (
-                  <article className="resource-card" key={resource.id}>
-                    <div className="card-icon">{resource.icon}</div>
-
-                    <Pill tone="blue" style={{ marginTop: 14 }}>
-                      {resource.type}
-                    </Pill>
-
-                    <h3 className="card-title">{resource.title}</h3>
-
-                    <div className="project-author">
-                      shared by {resource.author}
+              <div className="challenge-grid">
+                {filteredChallenges.map((challenge) => (
+                  <article className="challenge-card" key={challenge.id}>
+                    <div className="challenge-top">
+                      <div className="challenge-icon">{challenge.icon || '⚡'}</div>
+                      <Pill tone={challenge.status === 'Open' ? 'green' : 'orange'}>{challenge.status || '—'}</Pill>
                     </div>
-
-                    <div className="card-footer">
-                      <span className="project-stats">
-                        ♡ {resource.likes}
-                      </span>
-
-                      <button
-                        className="accept-btn"
-                        onClick={() =>
-                          showToast(
-                            `Opening ${resource.title}...`
-                          )
-                        }
-                      >
-                        OPEN
-                      </button>
+                    <div className="challenge-type">{challenge.type || challenge.category || 'Challenge'}</div>
+                    <h3>{challenge.title}</h3>
+                    <p>{challenge.description}</p>
+                    <div className="challenge-meta">
+                      <span>{challenge.time || '—'}</span>
+                      <Difficulty level={challenge.difficultyLevel} />
+                      <span>+{challenge.reward || 0} XP</span>
                     </div>
+                    <div className="skill-row">{(challenge.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div>
+                    <button className="btn btn-primary" style={{ width: '100%', marginTop: 14 }} onClick={() => setSelectedChallenge(challenge)}>VIEW CHALLENGE</button>
                   </article>
                 ))}
               </div>
-            </>
+
+              {!filteredChallenges.length && (
+                <EmptyState 
+                  icon="⚡" 
+                  title="No challenges available" 
+                  text="There are no published challenges matching your filters." 
+                  action={
+                    <button className="btn btn-primary radar-btn" onClick={() => showToast('Challenge notification set!')}>
+                      [ NOTIFY ME ON NEW CHALLENGE ]
+                    </button>
+                  }
+                />
+              )}
+            </section>
+          )}
+
+          {activeSection === 'tasks' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; tasks.queue()</div><h2>Your Tasks</h2><p>Tasks assigned by the academic system.</p></div></div>
+              <div className="panel">
+                <div className="panel-body">
+                  {tasks.length ? tasks.map((task) => (
+                    <div className="task-row" key={task.id}>
+                      <div><strong>{task.title}</strong><div className="task-meta">{task.course || '—'} · {task.status || 'Pending'} · {task.deadline ? formatDate(task.deadline) : 'No deadline'}</div></div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{task.xp != null && <Pill tone="orange">+{task.xp} XP</Pill>}<button className="btn" disabled={!user || actionLoading || task.status === 'Completed'} onClick={() => completeTask(task)}>{task.status === 'Completed' ? 'COMPLETED ✓' : 'COMPLETE'}</button></div>
+                    </div>
+                  )) : <EmptyState icon="✓" title="No tasks assigned" text="Assigned tasks will appear here when an instructor publishes them." />}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'teams' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; teams.directory()</div><h2>Teams</h2><p>Join or discover teams created by the community.</p></div></div>
+              <div className="resource-grid">
+                {teams.map((team) => (
+                  <article className="resource-card" key={team.id}>
+                    <div className="card-icon">👥</div><Pill tone="blue">{team.status || 'Open'}</Pill><h3 className="card-title">{team.name}</h3><div className="project-author">{team.challenge || 'Community team'}</div><div className="skill-row">{(team.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div><div className="card-footer"><span className="project-stats">{team.members || 0}/{team.max || 0}</span><button className="accept-btn" disabled={!user || actionLoading || team.members >= team.max} onClick={() => joinTeam(team)}>{team.members >= team.max ? 'FULL' : user ? 'JOIN' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!teams.length && <EmptyState icon="👥" title="No teams yet" text="Teams will appear after students create or join them." />}
+            </section>
+          )}
+
+          {activeSection === 'projects' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; projects.showcase()</div><h2>Projects</h2><p>Student work published by the community.</p></div></div>
+              <div className="resource-grid">
+                {projects.map((project) => (
+                  <article className="resource-card" key={project.id}>
+                    <div className="card-icon">{project.icon || '🚀'}</div><Pill tone="blue">{project.status || 'Published'}</Pill><h3 className="card-title">{project.title}</h3><div className="project-author">{project.authorName || project.author || 'Community member'}</div><p>{project.description || ''}</p><div className="skill-row">{(project.tech || project.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div><div className="card-footer"><span className="project-stats">♡ {project.likes || 0}</span><button className="accept-btn" disabled={!user || actionLoading} onClick={() => likeProject(project)}>{user ? 'LIKE' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!projects.length && <EmptyState icon="🚀" title="No projects yet" text="Be the first to showcase a real BSIE project." />}
+            </section>
+          )}
+
+          {activeSection === 'ideas' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; ideas.hub()</div><h2>Community Ideas</h2><p>Ideas proposed and voted on by the community.</p></div></div>
+              <div className="resource-grid">
+                {ideas.map((idea) => (
+                  <article className="resource-card" key={idea.id}>
+                    <div className="card-icon">💡</div><Pill tone="purple">{idea.category || 'Community'}</Pill><h3 className="card-title">{idea.title}</h3><div className="project-author">{idea.authorName || idea.author || 'Community member'}</div><p>{idea.description || ''}</p><div className="card-footer"><span className="project-stats">▲ {idea.votes || 0}</span><button className="accept-btn" disabled={!user || actionLoading} onClick={() => voteIdea(idea)}>{user ? 'VOTE' : 'SIGN IN'}</button></div>
+                  </article>
+                ))}
+              </div>
+              {!ideas.length && <EmptyState icon="💡" title="No ideas yet" text="Community ideas will appear here when students submit them." />}
+            </section>
+          )}
+
+          {activeSection === 'leaderboard' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; leaderboard.rank()</div><h2>Smart Leaderboard</h2><p>Ranking calculated from verified XP.</p></div></div>
+              <div className="leaderboard">
+                {leaderboard.map((person) => <div className={`leader-row ${user && person.id === user.id ? 'you' : ''}`} key={person.id || person.rank}><div className="leader-rank">{person.rank || '—'}</div><div className="avatar">{initials(person.name)}</div><div style={{ flex: 1 }}><div className="leader-name">{person.name || 'Member'} {person.ambassador ? <Pill tone="green">AMBASSADOR</Pill> : null}</div><div className="leader-meta">{person.level != null ? `LEVEL ${person.level}` : ''}</div></div><strong>{person.xp ?? 0} XP</strong></div>)}
+              </div>
+              {!leaderboard.length && <EmptyState icon="🏆" title="Leaderboard is empty" text="Ranking will appear after students earn verified XP." />}
+            </section>
+          )}
+
+          {activeSection === 'events' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; events.schedule()</div><h2>Events</h2><p>Workshops, seminars, competitions and community events.</p></div></div>
+              <div className="resource-grid">
+                {events.map((event) => (
+                  <article className="resource-card" key={event.id}>
+                    <div className="card-icon">{event.icon || '◈'}</div><Pill tone="orange">{event.type || 'Event'}</Pill><h3 className="card-title">{event.title}</h3><div className="project-author">{formatDate(event.startsAt || event.date)}</div><p>{event.description || ''}</p><div className="card-footer"><span className="project-stats">{event.capacity ? `${event.registered || 0}/${event.capacity}` : ''}</span>{event.registeredByMe ? <button className="accept-btn" onClick={() => unregisterEvent(event)}>REGISTERED ✓</button> : <button className="accept-btn" disabled={!user || actionLoading} onClick={() => registerEvent(event)}>{user ? 'REGISTER' : 'SIGN IN'}</button>}</div>
+                  </article>
+                ))}
+              </div>
+              {!events.length && <EmptyState icon="◈" title="No upcoming events" text="Events will appear here when they are published." />}
+            </section>
+          )}
+
+          {activeSection === 'resources' && (
+            <section className="page-section">
+              <div className="section-heading"><div><div className="section-kicker">&gt; resources.index()</div><h2>Resources & Badges</h2><p>Academic resources and verified achievements.</p></div></div>
+              <div className="resource-grid">
+                {resources.map((resource) => <article className="resource-card" key={resource.id}><div className="card-icon">{resource.icon || '▣'}</div><Pill tone="blue">{resource.type || 'Resource'}</Pill><h3 className="card-title">{resource.title}</h3><div className="project-author">{resource.authorName || resource.author || 'Academic resource'}</div><p>{resource.description || ''}</p><div className="card-footer"><span className="project-stats">♡ {resource.likes || 0}</span><button className="accept-btn" onClick={() => resource.url ? window.open(resource.url, '_blank', 'noopener,noreferrer') : showToast('Resource link is not available.')}>OPEN</button></div></article>)}
+              </div>
+              {!resources.length && <EmptyState icon="▣" title="No resources yet" text="Resources will appear when instructors publish them." />}
+            </section>
           )}
         </section>
       </div>
 
-      {/* =====================================================
-          MOBILE NAVIGATION
-      ===================================================== */}
+      {loading && (
+        <div className="community-loading-bar" role="status" aria-live="polite">
+          <span />
+          <span className="sr-only">Syncing community data…</span>
+        </div>
+      )}
 
-      <nav className="mobile-bottom-nav">
-        {[
-          ['dashboard', '⌂', 'Home'],
-          ['challenges', '⚡', 'Challenges'],
-          ['tasks', '✓', 'Tasks'],
-          ['projects', '🚀', 'Projects'],
-          ['leaderboard', '🏆', 'Rank'],
-        ].map(([id, icon, label]) => (
+      <nav className="mobile-bottom-nav" aria-label="Mobile community navigation">
+        {mobileNavItems.map((item) => (
           <button
-            key={id}
-            className={`mobile-nav-item ${
-              activeSection === id ? 'active' : ''
-            }`}
-            onClick={() => navigate(id)}
+            key={item.id}
+            className={`mobile-nav-item ${activeSection === item.id ? 'active' : ''}`}
+            onClick={() => navigate(item.id)}
+            aria-current={activeSection === item.id ? 'page' : undefined}
           >
-            <span className="mobile-nav-icon">{icon}</span>
-            {label}
+            <span className="mobile-nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+            {item.count ? <span className="mobile-nav-count">{item.count}</span> : null}
           </button>
         ))}
       </nav>
 
-      {/* =====================================================
-          FLOATING TERMINAL
-      ===================================================== */}
+      <button className="floating-terminal" onClick={() => setTerminalOpen(true)} aria-label="Open BSIE terminal">&gt;_</button>
 
-      <button
-        className="floating-terminal"
-        onClick={() => setTerminalOpen(true)}
-        aria-label="Open BSIE terminal"
-      >
-        &gt;_
-      </button>
-
-      {/* =====================================================
-          TERMINAL MODAL
-      ===================================================== */}
+      <button className="mobile-menu-button" onClick={() => setMobileMenu((value) => !value)} aria-label="Open menu">☰</button>
 
       {terminalOpen && (
-        <div
-          className="terminal-modal"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setTerminalOpen(false);
-            }
-          }}
-        >
+        <div className="terminal-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setTerminalOpen(false); }}>
           <div className="terminal-window">
-            <div className="terminal-top">
-              <span className="dot" />
-              <span className="dot" />
-              <span className="dot" />
-
-              <span className="terminal-name">
-                BSIE Community Terminal
-              </span>
-
-              <button
-                onClick={() => setTerminalOpen(false)}
-                style={{
-                  marginLeft: 'auto',
-                  border: 0,
-                  background: 'transparent',
-                  color: 'var(--muted)',
-                }}
-              >
-                ×
-              </button>
-            </div>
-
+            <div className="terminal-top"><span className="dot" /><span className="dot" /><span className="dot" /><span className="terminal-name">BSIE Community Terminal</span><button onClick={() => setTerminalOpen(false)} style={{ marginLeft: 'auto', border: 0, background: 'transparent', color: 'var(--muted)', fontSize: 20 }}>×</button></div>
             <div className="terminal-body">
-              {terminalLines.map((line, index) => (
-                <div
-                  key={`${line}-${index}`}
-                  className={
-                    line.startsWith('>') ||
-                    line.includes('ready') ||
-                    line.includes('student_01')
-                      ? 'terminal-line-accent'
-                      : ''
-                  }
-                >
-                  {line || '\u00A0'}
-                </div>
-              ))}
-            </div>
-
-            <div className="terminal-input-row">
-              <span>&gt;</span>
-
-              <input
-                autoFocus
-                className="terminal-input"
-                value={terminalInput}
-                onChange={(event) =>
-                  setTerminalInput(event.target.value)
-                }
-                onKeyDown={handleTerminalKeyDown}
-                placeholder='type "help"...'
-              />
-
-              <span className="terminal-cursor" />
+              {terminalLines.map((line, index) => <div key={`${line}-${index}`} className={line.startsWith('>') || line.includes('ready') ? 'terminal-line-accent' : ''}>{line || '\u00A0'}</div>)}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <span className="terminal-line-accent">&gt;</span>
+                <input autoFocus value={terminalInput} onChange={(event) => setTerminalInput(event.target.value)} onKeyDown={handleTerminalKeyDown} placeholder="type a command..." style={{ flex: 1, background: 'transparent', border: 0, outline: 0, color: 'var(--text)', fontFamily: 'inherit' }} />
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* =====================================================
-          CHALLENGE MODAL
-      ===================================================== */}
-
       {selectedChallenge && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedChallenge(null);
-            }
-          }}
-        >
-          <article className="challenge-modal">
-            <div className="modal-header">
-              <div>
-                <div className="eyebrow">
-                  challenge://{selectedChallenge.id}
-                </div>
-
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: 25,
-                    letterSpacing: '-0.04em',
-                  }}
-                >
-                  {selectedChallenge.icon}{' '}
-                  {selectedChallenge.title}
-                </h2>
-              </div>
-
-              <button
-                className="modal-close"
-                onClick={() => setSelectedChallenge(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="modal-content">
-              <p className="modal-description">
-                {selectedChallenge.description}
-              </p>
-
-              <div className="modal-grid">
-                <div className="modal-stat">
-                  <div className="modal-stat-label">DIFFICULTY</div>
-                  <div className="modal-stat-value">
-                    {selectedChallenge.difficulty}
-                  </div>
-                </div>
-
-                <div className="modal-stat">
-                  <div className="modal-stat-label">TIME</div>
-                  <div className="modal-stat-value">
-                    {selectedChallenge.time}
-                  </div>
-                </div>
-
-                <div className="modal-stat">
-                  <div className="modal-stat-label">MODE</div>
-                  <div className="modal-stat-value">
-                    {selectedChallenge.mode}
-                  </div>
-                </div>
-
-                <div className="modal-stat">
-                  <div className="modal-stat-label">REWARD</div>
-                  <div className="modal-stat-value">
-                    +{selectedChallenge.reward} XP
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <div
-                  style={{
-                    color: 'var(--muted)',
-                    fontSize: 9,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Required Skills
-                </div>
-
-                <div className="tag-list">
-                  {selectedChallenge.skills.map((skill) => (
-                    <Pill tone="green" key={skill}>
-                      #{skill}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ marginTop: 20 }}>
-                <div
-                  style={{
-                    color: 'var(--muted)',
-                    fontSize: 9,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Mission Flow
-                </div>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(5, minmax(0, 1fr))',
-                    gap: 6,
-                    marginTop: 9,
-                  }}
-                >
-                  {[
-                    'Brief',
-                    'Tasks',
-                    'Build',
-                    'Submit',
-                    'Reward',
-                  ].map((step, index) => (
-                    <div
-                      key={step}
-                      style={{
-                        textAlign: 'center',
-                        padding: '10px 5px',
-                        border: '1px solid var(--line)',
-                        borderRadius: 9,
-                        background:
-                          index === 0
-                            ? 'rgba(141,255,202,.07)'
-                            : 'rgba(255,255,255,.015)',
-                        color:
-                          index === 0
-                            ? 'var(--accent)'
-                            : 'var(--muted)',
-                        fontSize: 8,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {index + 1}. {step}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    acceptChallenge(selectedChallenge);
-                    setSelectedChallenge(null);
-                  }}
-                >
-                  ACCEPT CHALLENGE
-                </button>
-
-                {selectedChallenge.mode === 'Team' && (
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      setSelectedChallenge(null);
-                      navigate('teams');
-                    }}
-                  >
-                    FIND A TEAM
-                  </button>
-                )}
-
-                <button
-                  className="btn"
-                  onClick={() => setSelectedChallenge(null)}
-                >
-                  CLOSE
-                </button>
-              </div>
+        <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedChallenge(null); }}>
+          <article className="modal-card">
+            <div className="modal-header"><div><div className="section-kicker">&gt; challenge.inspect()</div><h2>{selectedChallenge.title}</h2></div><button className="icon-button" onClick={() => setSelectedChallenge(null)}>×</button></div>
+            <p>{selectedChallenge.description}</p>
+            <div className="skill-row">{(selectedChallenge.skills || []).map((skill) => <Pill key={skill}>{skill}</Pill>)}</div>
+            <div className="modal-actions">
+              <button className="btn btn-primary" disabled={!user || actionLoading} onClick={() => { acceptChallenge(selectedChallenge); setSelectedChallenge(null); }}>{user ? 'ACCEPT CHALLENGE' : 'SIGN IN TO ACCEPT'}</button>
+              {selectedChallenge.mode === 'Team' && <button className="btn" onClick={() => { setSelectedChallenge(null); navigate('teams'); }}>FIND A TEAM</button>}
+              <button className="btn" onClick={() => setSelectedChallenge(null)}>CLOSE</button>
             </div>
           </article>
         </div>
       )}
 
-      {/* =====================================================
-          TOAST
-      ===================================================== */}
+{authModal && (
+        <div className="auth-terminal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAuthModal(); }}>
+          <article className="auth-terminal-card" role="dialog" aria-modal="true" aria-labelledby="auth-terminal-title">
+            <div className="auth-terminal-chrome">
+              <div className="auth-terminal-dots"><span /><span /><span /></div>
+              <div className="auth-terminal-path">bsie://auth</div>
+              <button className="auth-close" onClick={closeAuthModal} disabled={authBusy} aria-label="Close authentication">×</button>
+            </div>
 
+            <div className="auth-terminal-body">
+              <div className="auth-kicker">&gt; auth.utb()</div>
+              <div className="auth-title-row">
+                <div>
+                  <h2 id="auth-terminal-title">University Identity Terminal</h2>
+                  <p>Authenticate with your email and student ID.</p>
+                </div>
+                <div className="auth-status">{authBusy ? 'CONNECTING' : 'SECURE'}</div>
+              </div>
+
+              <div className="auth-progress" aria-label={`Authentication step ${authStep} of 3`}>
+                {[['01','ROLE'],['02','IDENTITY'],['03','OTP']].map(([number, label], index) => {
+                  const step = index + 1;
+                  return (
+                    <div className={`auth-progress-step ${authStep >= step ? 'done' : ''} ${authStep === step ? 'current' : ''}`} key={label}>
+                      <span className="auth-progress-node">{authStep > step ? '✓' : number}</span>
+                      <span>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {authStep === 1 && (
+                <section className="auth-stage">
+                  <div className="auth-command">$ identify.user()</div>
+                  <h3>Choose your access profile</h3>
+                  <p className="auth-stage-copy">Your role controls which workspace and permissions are available after authentication.</p>
+                  <div className="auth-role-grid">
+                    <button className="auth-role-card" onClick={() => selectAuthRole('student')}>
+                      <span className="auth-role-icon">ST</span>
+                      <span><strong>STUDENT</strong><small>BSIE student account</small></span>
+                      <span className="auth-arrow">→</span>
+                    </button>
+                    <button className="auth-role-card" onClick={() => selectAuthRole('instructor')}>
+                      <span className="auth-role-icon">DR</span>
+                      <span><strong>INSTRUCTOR</strong><small>Faculty / academic account</small></span>
+                      <span className="auth-arrow">→</span>
+                    </button>
+                    <button className="auth-role-card auth-role-guest" onClick={() => selectAuthRole('guest')}>
+                      <span className="auth-role-icon">GU</span>
+                      <span><strong>GUEST</strong><small>Public community access</small></span>
+                      <span className="auth-arrow">→</span>
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {authStep === 2 && authRole !== 'guest' && (
+                <section className="auth-stage">
+                  <div className="auth-command">$ identify.student()</div>
+                  <h3>Enter your email & student ID</h3>
+                  <p className="auth-stage-copy">A 6-digit verification code will be sent to your email.</p>
+                  
+                  <label className="auth-field-label">EMAIL ADDRESS</label>
+                  <div className="auth-input-shell">
+                    <span>&gt;</span>
+                    <input autoFocus type="email" value={utbEmail} onChange={(event) => { setUtbEmail(event.target.value.toLowerCase()); setOtpError(''); }} placeholder="name@domain.com" autoComplete="email" />
+                  </div>
+
+                  <label className="auth-field-label">STUDENT ID</label>
+                  <div className="auth-input-shell">
+                    <span>&gt;</span>
+                    <input type="text" value={studentId} onChange={(event) => { setStudentId(event.target.value); setOtpError(''); }} placeholder="e.g. 20260000" />
+                  </div>
+
+                  <div className="auth-derived-email">Mode: <strong>Open Email Registration</strong></div>
+                  {otpError && <div className="otp-error" role="alert">{otpError}</div>}
+                  <div className="auth-actions">
+                    <button className="btn" onClick={() => setAuthStep(1)} disabled={authBusy}>← BACK</button>
+                    <button className="btn btn-primary" onClick={() => continueIdentityStep()} disabled={authBusy}>{authBusy ? 'SENDING...' : 'SEND VERIFICATION CODE'}</button>
+                  </div>
+                </section>
+              )}
+
+              {authStep === 2 && authRole === 'guest' && (
+                <section className="auth-stage">
+                  <div className="auth-command">$ guest.session()</div>
+                  <h3>Continue with limited access</h3>
+                  <p className="auth-stage-copy">Guest mode lets you explore public community content without university authentication.</p>
+                  <div className="guest-permissions"><span>✓ Explore public content</span><span>✓ View events and resources</span><span>× Submit work</span><span>× Earn XP / join private teams</span></div>
+                  <div className="auth-actions"><button className="btn" onClick={() => setAuthStep(1)}>← BACK</button><button className="btn btn-primary" onClick={continueAsGuest}>CONTINUE AS GUEST →</button></div>
+                </section>
+              )}
+
+              {authStep === 3 && authRole !== 'guest' && (
+                <section className="auth-stage">
+                  <div className="auth-command">$ verify.access()</div>
+                  <h3>VERIFY ACCESS CODE</h3>
+                  <p className="auth-stage-copy">A 6-digit verification code was sent to <strong>{utbEmail}</strong></p>
+                  {otpMessage && <div className="otp-message" role="status">{otpMessage}</div>}
+                  <label className="auth-field-label" htmlFor="utb-otp">6-DIGIT CODE</label>
+                  <input
+                    id="utb-otp"
+                    className="otp-input"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    value={otpCode}
+                    onChange={(event) => {
+                      setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+                      setOtpError('');
+                    }}
+                    onKeyDown={(event) => { if (event.key === 'Enter') verifyOtp(); }}
+                    placeholder="______"
+                    aria-label="6-digit verification code"
+                  />
+                  {otpError && <div className="otp-error" role="alert">{otpError}</div>}
+                  <button className="otp-verify-button" onClick={verifyOtp} disabled={authBusy || otpCode.length !== 6}>
+                    {authBusy ? 'VERIFYING...' : 'VERIFY CODE'}
+                    <b>→</b>
+                  </button>
+                  <div className="otp-resend">
+                    <span>Didn't receive it?</span>
+                    <button type="button" onClick={resendOtp} disabled={authBusy || otpResendSeconds > 0}>
+                      {otpResendSeconds > 0 ? `RESEND IN ${otpResendSeconds}s` : 'RESEND CODE'}
+                    </button>
+                  </div>
+                  <div className="auth-actions">
+                    <button className="btn" onClick={() => { setAuthStep(2); setOtpCode(''); setOtpError(''); }} disabled={authBusy}>← CHANGE EMAIL</button>
+                  </div>
+                </section>
+              )}
+              <div className="auth-terminal-footer">session:// university-auth · provider:// OTP · mode:// open-domain</div>
+            </div>
+          </article>
+        </div>
+      )}
       {toast && <div className="toast">{toast}</div>}
+    
+<style jsx global>{`
+  .profile-mini { cursor: pointer; border: 0; background: transparent; font: inherit; text-align: left; color: inherit; display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 12px; }
+  .profile-mini:hover { background: rgba(141,255,202,.06); }
+  .profile-mini .avatar { overflow: hidden; }
+  .profile-mini .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .notification-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 4px; vertical-align: top; }
+  .modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(8px); }
+  .modal-card { width: min(720px, 100%); max-height: 90vh; overflow: auto; border: 1px solid var(--line-strong); border-radius: 18px; background: linear-gradient(180deg, rgba(12,25,23,.98), rgba(7,16,15,.98)); box-shadow: 0 30px 100px rgba(0,0,0,.45); padding: 22px; }
+  .auth-modal-card { width: min(560px, 100%); }
+  .modal-header { display:flex; align-items:flex-start; gap:16px; justify-content:space-between; margin-bottom:14px; }
+  .modal-header h2 { margin: 4px 0 0; }
+  .modal-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+  .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  textarea.search-input { resize:vertical; }
+  @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } .form-grid > * { grid-column: auto !important; } .auth-terminal-body { padding:20px; } .auth-role-grid { grid-template-columns:1fr; } .auth-role-guest { grid-column:auto; } .guest-permissions { grid-template-columns:1fr; } .auth-title-row { flex-direction:column; } .auth-progress { gap:3px; } }
+`}</style>
+
     </main>
   );
 }
