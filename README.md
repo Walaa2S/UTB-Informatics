@@ -45,7 +45,7 @@ credits earned against the 204-credit degree total, including the 162-credit gat
 Design Project A capstone.
 
 **`frontend/lib/api.js`** — fetch wrapper for the Express backend (`NEXT_PUBLIC_API_URL`,
-defaults to `http://localhost:4000`). The tree works two ways:
+defaults to `http://localhost:4002`). The tree works two ways:
 - **Live**: fetches `/api/courses` from your running backend; if you're logged in
   (`utb_token` in localStorage), passed courses sync through `/api/auth/me` and
   `/api/courses/:id/mark-passed`.
@@ -71,7 +71,7 @@ cd backend
 cp .env.example .env      # fill in MONGO_URI and JWT_SECRET
 npm install
 npm run seed               # populates MongoDB with the real BSIE curriculum
-npm run dev                # http://localhost:4000
+npm run dev                # http://localhost:4002
 
 # frontend
 cd frontend

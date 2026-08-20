@@ -44,7 +44,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('dashboard');
   const [selectedChallenge, setSelectedChallenge] = useState(null);
-  const [challengeAccepted, setChallengeAccepted] = useState(false);
+  const [acceptedChallengeId, setAcceptedChallengeId] = useState(null);
 const [submission, setSubmission] = useState({ link: '', file: null, note: '' });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
@@ -255,7 +255,7 @@ const [submission, setSubmission] = useState({ link: '', file: null, note: '' })
     setBusy(true);
     try {
       await apiFetch(`/challenges/${challengeId}/accept`, { method: 'POST' });
-      setChallengeAccepted(true);
+      setAcceptedChallengeId(challenge.id);
       showToast('⚡ Challenge accepted! Submission portal unlocked.');
       await load();
     } catch (error) {
@@ -702,303 +702,1074 @@ const [submission, setSubmission] = useState({ link: '', file: null, note: '' })
           )}
         </section>
       </div>
+{/* =========================================================
+    CHALLENGE DETAILS + SUBMISSION MODAL
+========================================================= */}
 
 {selectedChallenge && (
-        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedChallenge(null); }}>
-          <article className="terminal-modal-card" style={{ maxWidth: '750px', width: '100%' }}>
-            <div className="auth-terminal-chrome" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid var(--line)', background: 'rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff5f56', display: 'inline-block' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ffbd2e', display: 'inline-block' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#27c93f', display: 'inline-block' }}></span>
-                <span style={{ marginLeft: '10px', font: '11px monospace', color: 'var(--muted)' }}>bsie://challenge.inspect({selectedChallenge.title})</span>
-              </div>
-              <button className="icon-button" onClick={() => setSelectedChallenge(null)} style={{ width: '28px', height: '28px', fontSize: '14px' }}>×</button>
-            </div>
+  <div
+    className="modal-backdrop"
+    onMouseDown={(e) => {
+      if (e.target === e.currentTarget && !busy) {
+        setSelectedChallenge(null);
+      }
+    }}
+  >
+    <article
+      className="terminal-modal-card"
+      style={{
+        maxWidth: '750px',
+        width: '100%',
+      }}
+    >
+      {/* =====================================================
+          CHALLENGE MODAL HEADER
+      ===================================================== */}
 
-            <div style={{ padding: '24px', maxHeight: '80vh', overflowY: 'auto', fontFamily: 'monospace' }}>
-              <div style={{ color: 'var(--accent)', fontSize: '11px', marginBottom: '8px' }}>&gt; challenge.details()</div>
-              <h2 style={{ margin: '0 0 16px', fontSize: '20px', color: 'var(--text)', fontFamily: 'Inter' }}>{selectedChallenge.title}</h2>
+      <div
+        className="auth-terminal-chrome"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          borderBottom: '1px solid var(--line)',
+          background: 'rgba(0,0,0,0.4)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#ff5f56',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid var(--line)' }}>
-                  <span style={{ fontSize: '9px', color: 'var(--muted)' }}>REWARD XP</span>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent)' }}>+{selectedChallenge.reward || 0} XP</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid var(--line)' }}>
-                  <span style={{ fontSize: '9px', color: 'var(--muted)' }}>DIFFICULTY</span>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{selectedChallenge.difficulty || 'Intermediate'}</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid var(--line)' }}>
-                  <span style={{ fontSize: '9px', color: 'var(--muted)' }}>START DATE</span>
-                  <div style={{ fontSize: '11px' }}>{formatDate ? formatDate(selectedChallenge.startDate) : selectedChallenge.startDate}</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid var(--line)' }}>
-                  <span style={{ fontSize: '9px', color: 'var(--muted)' }}>DEADLINE</span>
-                  <div style={{ fontSize: '11px', color: 'var(--orange)' }}>{formatDate ? formatDate(selectedChallenge.deadline) : selectedChallenge.deadline}</div>
-                </div>
-              </div>
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#ffbd2e',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
 
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', marginBottom: '6px' }}>INSTRUCTIONS & DESCRIPTION</span>
-                <div style={{ background: 'rgba(0,0,0,0.4)', padding: '16px', borderRadius: '12px', border: '1px solid var(--line)', color: 'var(--soft)', fontSize: '12px', lineHeight: '1.6', fontFamily: 'Inter', whiteSpace: 'pre-wrap' }}>
-                  {selectedChallenge.description || 'No instructions provided.'}
-                </div>
-              </div>
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#27c93f',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
 
-              {/* قسم عرض المرفقات والروابط في حال وجودها */}
-              {(selectedChallenge.resourceLink || selectedChallenge.file || selectedChallenge.imageUrl) && (
-                <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(141,255,202,.04)', borderLeft: '3px solid var(--accent)', borderRadius: '0 8px 8px 0' }}>
-                  <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', marginBottom: '6px' }}>ATTACHMENTS & RESOURCES:</span>
-                  
-                  {selectedChallenge.resourceLink && (
-                    <div style={{ marginBottom: '6px' }}>
-                      <a href={selectedChallenge.resourceLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: '11px', textDecoration: 'underline' }}>
-                        🔗 Reference Link ↗
-                      </a>
-                    </div>
-                  )}
-
-                  {(selectedChallenge.file || selectedChallenge.imageUrl) && (
-                    <div>
-                      <a href={selectedChallenge.file || selectedChallenge.imageUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', fontSize: '11px', textDecoration: 'underline' }}>
-                        📎 Download Attachment / File ↗
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* زر قبول التحدي ونموذج التسليم */}
-              {!challengeAccepted ? (
-                <div style={{ marginTop: '20px' }}>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', fontFamily: 'Inter' }} 
-                    disabled={busy} 
-                    onClick={() => {
-                      if (!user) {
-                        setSelectedChallenge(null);
-                        openAuthModal();
-                      } else {
-                        acceptChallenge(selectedChallenge);
-                      }
-                    }}
-                  >
-                    {busy ? 'PROCESSING...' : (user ? '⚡ ACCEPT CHALLENGE & UNLOCK PORTAL' : '🔑 SIGN IN TO ACCEPT')}
-                  </button>
-                </div>
-              ) : (
-                /* هنا يوضع فورم التسليم (Submission Form) */
-                <div style={{ borderTop: '1px solid var(--line)', paddingTop: '16px', marginTop: '16px' }}>
-                  <span style={{ color: 'var(--accent)', fontSize: '11px', display: 'block', marginBottom: '10px' }}>&gt; submission.portal()</span>
-                  {/* بقية حقول إدخال الحل */}
-                </div>
-              )}
-            </div>
-          </article>
+          <span
+            style={{
+              marginLeft: '10px',
+              font: '11px monospace',
+              color: 'var(--muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            bsie://challenge.inspect(
+            {selectedChallenge.title}
+            )
+          </span>
         </div>
-      )}
 
-{!challengeAccepted ? (
-                <div style={{ marginTop: '20px' }}>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', fontFamily: 'Inter' }} 
-                    disabled={busy} 
-                    onClick={() => {
-                      if (!user) {
-                        setSelectedChallenge(null);
-                        openAuthModal(); // فتح نافذة تسجيل الدخول إذا لم يكن مسجلاً
-                      } else {
-                        acceptChallenge(selectedChallenge); // قبول التحدي وفتح فورم التسليم إذا كان مسجلاً
-                      }
-                    }}
-                  >
-                    {busy ? 'PROCESSING...' : (user ? '⚡ ACCEPT CHALLENGE & UNLOCK PORTAL' : '🔑 SIGN IN TO ACCEPT')}
-                  </button>
-                </div>
-              ) : (
-                // هنا يظهر فورم التسليم (رابط الجيت هاب، رفع الملف، إدخال الآيدي، وملاحظات الدكتور)
-                <form onSubmit={submitSolution} style={{ borderTop: '1px solid var(--line)', paddingTop: '20px', marginTop: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <span style={{ color: 'var(--accent)', fontSize: '11px' }}>&gt; submission.portal()</span>
-                    <Pill tone="green">ACCEPTED ✓</Pill>
-                  </div>
-                  
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>GITHUB / PROJECT LINK</label>
-                  <input className="search-input" value={submission.link} onChange={(e) => setSubmission({ ...submission, link: e.target.value })} placeholder="https://github.com/..." style={{ fontFamily: 'Inter' }} />
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => setSelectedChallenge(null)}
+          disabled={busy}
+          style={{
+            width: '28px',
+            height: '28px',
+            fontSize: '14px',
+            flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
+      </div>
 
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>ATTACH SOLUTION FILE (PDF/ZIP/IMG)</label>
-                  <input className="search-input file-input" type="file" onChange={(e) => setSubmission({ ...submission, file: e.target.files?.[0] || null })} />
+      {/* =====================================================
+          CHALLENGE CONTENT
+      ===================================================== */}
 
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>NOTE TO INSTRUCTOR</label>
-                  <textarea className="search-input" style={{ minHeight: 90, padding: 12, fontFamily: 'Inter' }} value={submission.note} onChange={(e) => setSubmission({ ...submission, note: e.target.value })} placeholder="Write your notes or summary for the instructor..." />
-
-                  <div className="modal-actions" style={{ fontFamily: 'Inter' }}>
-                    <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'SUBMITTING...' : 'SUBMIT SOLUTION TO INSTRUCTOR'}</button>
-                    <button type="button" className="btn" onClick={() => setSelectedChallenge(null)}>CLOSE</button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </article>
+      <div
+        style={{
+          padding: '24px',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          fontFamily: 'monospace',
+        }}
+      >
+        <div
+          style={{
+            color: 'var(--accent)',
+            fontSize: '11px',
+            marginBottom: '8px',
+          }}
+        >
+          &gt; challenge.details()
         </div>
-      )}
 
-      {/* نافذة تسجيل الدخول (Auth Modal) */}
-      {authModal && (
-        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeAuthModal(); }}>
-          <article className="terminal-modal-card" style={{ maxWidth: '520px' }}>
-            <div className="auth-terminal-chrome" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid var(--line)', background: 'rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff5f56', display: 'inline-block' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ffbd2e', display: 'inline-block' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#27c93f', display: 'inline-block' }}></span>
-                <span style={{ marginLeft: '10px', font: '11px monospace', color: 'var(--muted)' }}>bsie://auth.utb()</span>
+        <h2
+          style={{
+            margin: '0 0 16px',
+            fontSize: '20px',
+            color: 'var(--text)',
+            fontFamily: 'Inter',
+          }}
+        >
+          {selectedChallenge.title}
+        </h2>
+
+        {/* ===================================================
+            CHALLENGE INFORMATION
+        =================================================== */}
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '10px',
+            marginBottom: '16px',
+          }}
+        >
+          {/* XP */}
+
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid var(--line)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '9px',
+                color: 'var(--muted)',
+              }}
+            >
+              REWARD XP
+            </span>
+
+            <div
+              style={{
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: 'var(--accent)',
+              }}
+            >
+              +{selectedChallenge.reward || 0} XP
+            </div>
+          </div>
+
+          {/* DIFFICULTY */}
+
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid var(--line)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '9px',
+                color: 'var(--muted)',
+              }}
+            >
+              DIFFICULTY
+            </span>
+
+            <div
+              style={{
+                fontSize: '14px',
+                fontWeight: 'bold',
+              }}
+            >
+              {selectedChallenge.difficulty || 'Intermediate'}
+            </div>
+          </div>
+
+          {/* START DATE */}
+
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid var(--line)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '9px',
+                color: 'var(--muted)',
+              }}
+            >
+              START DATE
+            </span>
+
+            <div
+              style={{
+                fontSize: '11px',
+              }}
+            >
+              {selectedChallenge.startDate
+                ? typeof formatDate === 'function'
+                  ? formatDate(selectedChallenge.startDate)
+                  : new Date(
+                      selectedChallenge.startDate
+                    ).toLocaleDateString()
+                : '—'}
+            </div>
+          </div>
+
+          {/* DEADLINE */}
+
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid var(--line)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '9px',
+                color: 'var(--muted)',
+              }}
+            >
+              DEADLINE
+            </span>
+
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--orange)',
+              }}
+            >
+              {selectedChallenge.deadline
+                ? typeof formatDate === 'function'
+                  ? formatDate(selectedChallenge.deadline)
+                  : new Date(
+                      selectedChallenge.deadline
+                    ).toLocaleDateString()
+                : '—'}
+            </div>
+          </div>
+        </div>
+
+        {/* ===================================================
+            DESCRIPTION
+        =================================================== */}
+
+        <div
+          style={{
+            marginBottom: '16px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '9px',
+              color: 'var(--muted)',
+              display: 'block',
+              marginBottom: '6px',
+            }}
+          >
+            INSTRUCTIONS & DESCRIPTION
+          </span>
+
+          <div
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid var(--line)',
+              color: 'var(--soft)',
+              fontSize: '12px',
+              lineHeight: '1.6',
+              fontFamily: 'Inter',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {selectedChallenge.description ||
+              'No instructions provided.'}
+          </div>
+        </div>
+
+        {/* ===================================================
+            ATTACHMENTS / RESOURCES
+        =================================================== */}
+
+        {(selectedChallenge.resourceLink ||
+          selectedChallenge.file ||
+          selectedChallenge.imageUrl) && (
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '12px',
+              background: 'rgba(141,255,202,.04)',
+              borderLeft: '3px solid var(--accent)',
+              borderRadius: '0 8px 8px 0',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--muted)',
+                display: 'block',
+                marginBottom: '8px',
+              }}
+            >
+              ATTACHMENTS & RESOURCES
+            </span>
+
+            {selectedChallenge.resourceLink && (
+              <div
+                style={{
+                  marginBottom:
+                    selectedChallenge.file ||
+                    selectedChallenge.imageUrl
+                      ? '8px'
+                      : '0',
+                }}
+              >
+                <a
+                  href={selectedChallenge.resourceLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'var(--accent)',
+                    fontSize: '11px',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  🔗 Reference Link ↗
+                </a>
               </div>
-              <button className="icon-button" onClick={closeAuthModal} disabled={busy} style={{ width: '28px', height: '28px', fontSize: '14px' }}>×</button>
+            )}
+
+            {(selectedChallenge.file ||
+              selectedChallenge.imageUrl) && (
+              <div>
+                <a
+                  href={
+                    selectedChallenge.file ||
+                    selectedChallenge.imageUrl
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'var(--blue)',
+                    fontSize: '11px',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  📎 Download Attachment / File ↗
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================================================
+            ACCEPT / SUBMISSION SECTION
+        =================================================== */}
+
+        {!challengeAccepted ? (
+          /* =================================================
+             NOT ACCEPTED YET
+          ================================================= */
+
+          <div
+            style={{
+              marginTop: '20px',
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                fontFamily: 'Inter',
+              }}
+              disabled={busy}
+              onClick={() => {
+                if (!user) {
+                  setSelectedChallenge(null);
+                  openAuthModal();
+                  return;
+                }
+
+                acceptChallenge(selectedChallenge);
+              }}
+            >
+              {busy
+                ? 'PROCESSING...'
+                : user
+                  ? '⚡ ACCEPT CHALLENGE & UNLOCK PORTAL'
+                  : '🔑 SIGN IN TO ACCEPT'}
+            </button>
+          </div>
+        ) : (
+          /* =================================================
+             ACCEPTED → SUBMISSION FORM
+          ================================================= */
+
+          <form
+            onSubmit={submitSolution}
+            style={{
+              borderTop: '1px solid var(--line)',
+              paddingTop: '20px',
+              marginTop: '20px',
+            }}
+          >
+            {/* Submission Header */}
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginBottom: '14px',
+              }}
+            >
+              <span
+                style={{
+                  color: 'var(--accent)',
+                  fontSize: '11px',
+                }}
+              >
+                &gt; submission.portal()
+              </span>
+
+              <Pill tone="green">
+                ACCEPTED ✓
+              </Pill>
             </div>
 
-            <div style={{ padding: '24px', fontFamily: 'monospace' }}>
-              <div style={{ color: 'var(--accent)', fontSize: '11px', marginBottom: '8px' }}>&gt; auth.session()</div>
-              <h2 style={{ margin: '0 0 16px', fontSize: '20px', color: 'var(--text)', fontFamily: 'Inter' }}>University Identity Terminal</h2>
+            {/* GitHub / Project Link */}
 
-              {authStep === 1 && (
-                <div>
-                  <p style={{ color: 'var(--muted)', fontSize: '12px', marginBottom: '20px', fontFamily: 'Inter' }}>Select your access role to proceed:</p>
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    <button className="btn" style={{ justifyContent: 'flex-start', fontFamily: 'Inter' }} onClick={() => selectAuthRole('student')}>
-                      ⚡ STUDENT WORKSPACE
-                    </button>
-                  </div>
-                </div>
-              )}
+            <label
+              className="field-label"
+              style={{
+                fontFamily: 'Inter',
+              }}
+            >
+              GITHUB / PROJECT LINK
+            </label>
 
-              {authStep === 2 && (
-                <div>
-                  <p style={{ color: 'var(--muted)', fontSize: '12px', marginBottom: '16px', fontFamily: 'Inter' }}>Enter your university credentials to receive a verification code.</p>
-                  
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>UNIVERSITY EMAIL</label>
-                  <input className="search-input" type="email" value={utbEmail} onChange={(e) => setUtbEmail(e.target.value)} placeholder="student@utb.edu.bh" style={{ fontFamily: 'Inter', marginBottom: '12px' }} />
+            <input
+              className="search-input"
+              type="url"
+              value={submission.link}
+              onChange={(e) =>
+                setSubmission({
+                  ...submission,
+                  link: e.target.value,
+                })
+              }
+              placeholder="https://github.com/..."
+              style={{
+                fontFamily: 'Inter',
+                marginBottom: '14px',
+              }}
+            />
 
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>STUDENT ID</label>
-                  <input className="search-input" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="e.g. 20260000" style={{ fontFamily: 'Inter', marginBottom: '16px' }} />
+            {/* Solution File */}
 
-                  {otpError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginBottom: '12px' }}>{otpError}</div>}
+            <label
+              className="field-label"
+              style={{
+                fontFamily: 'Inter',
+              }}
+            >
+              ATTACH SOLUTION FILE (PDF/ZIP/IMG)
+            </label>
 
-                  <div className="modal-actions" style={{ fontFamily: 'Inter' }}>
-                    <button className="btn btn-primary" disabled={busy} onClick={requestOtp}>{busy ? 'SENDING...' : 'SEND OTP CODE →'}</button>
-                    <button className="btn" onClick={() => setAuthStep(1)}>BACK</button>
-                  </div>
-                </div>
-              )}
+            <input
+              className="search-input file-input"
+              type="file"
+              accept=".pdf,.zip,.rar,.png,.jpg,.jpeg"
+              onChange={(e) =>
+                setSubmission({
+                  ...submission,
+                  file:
+                    e.target.files?.[0] || null,
+                })
+              }
+              style={{
+                marginBottom: '14px',
+              }}
+            />
 
-              {authStep === 3 && (
-                <div>
-                  <p style={{ color: 'var(--muted)', fontSize: '12px', marginBottom: '16px', fontFamily: 'Inter' }}>Enter the 6-digit verification code sent to <strong>{utbEmail}</strong>.</p>
-                  {otpMessage && <div style={{ color: 'var(--accent)', fontSize: '11px', marginBottom: '12px' }}>{otpMessage}</div>}
+            {/* Note */}
 
-                  <label className="field-label" style={{ fontFamily: 'Inter' }}>6-DIGIT CODE</label>
-                  <input className="search-input" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="______" style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontFamily: 'monospace', marginBottom: '16px' }} />
+            <label
+              className="field-label"
+              style={{
+                fontFamily: 'Inter',
+              }}
+            >
+              NOTE TO INSTRUCTOR
+            </label>
 
-                  {otpError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginBottom: '12px' }}>{otpError}</div>}
+            <textarea
+              className="search-input"
+              style={{
+                minHeight: 90,
+                padding: 12,
+                fontFamily: 'Inter',
+                resize: 'vertical',
+                marginBottom: '16px',
+              }}
+              value={submission.note}
+              onChange={(e) =>
+                setSubmission({
+                  ...submission,
+                  note: e.target.value,
+                })
+              }
+              placeholder="Write your notes or summary for the instructor..."
+            />
 
-                  <div className="modal-actions" style={{ fontFamily: 'Inter' }}>
-                    <button className="btn btn-primary" disabled={busy || otpCode.length !== 6} onClick={verifyOtp}>{busy ? 'VERIFYING...' : 'VERIFY & SIGN IN'}</button>
-                    <button className="btn" onClick={() => setAuthStep(2)}>CHANGE EMAIL</button>
-                  </div>
-                </div>
-              )}
+            {/* Submission Actions */}
+
+            <div
+              className="modal-actions"
+              style={{
+                fontFamily: 'Inter',
+              }}
+            >
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={busy}
+              >
+                {busy
+                  ? 'SUBMITTING...'
+                  : 'SUBMIT SOLUTION TO INSTRUCTOR'}
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={() =>
+                  setSelectedChallenge(null)
+                }
+              >
+                CLOSE
+              </button>
             </div>
-          </article>
+          </form>
+        )}
+      </div>
+    </article>
+  </div>
+)}
+{/* =========================================================
+    AUTH MODAL
+========================================================= */}
+{authModal && (
+  <div
+    className="modal-backdrop"
+    onMouseDown={(e) => {
+      if (e.target === e.currentTarget) {
+        closeAuthModal();
+      }
+    }}
+  >
+    <article
+      className="terminal-modal-card"
+      style={{ maxWidth: '520px' }}
+    >
+      {/* Auth Header */}
+      <div
+        className="auth-terminal-chrome"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          borderBottom: '1px solid var(--line)',
+          background: 'rgba(0,0,0,0.4)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            gap: '6px',
+          }}
+        >
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#ff5f56',
+              display: 'inline-block',
+            }}
+          />
+
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#ffbd2e',
+              display: 'inline-block',
+            }}
+          />
+
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#27c93f',
+              display: 'inline-block',
+            }}
+          />
+
+          <span
+            style={{
+              marginLeft: '10px',
+              font: '11px monospace',
+              color: 'var(--muted)',
+            }}
+          >
+            bsie://auth.utb()
+          </span>
         </div>
-      )}
 
-      <style jsx global>{`
-        :root{--bg:#050d0c;--panel:rgba(12,25,24,.88);--line:rgba(147,255,202,.15);--line-strong:rgba(147,255,202,.3);--text:#eefdf7;--muted:#8ca9a1;--soft:#b7ccc6;--accent:#8dffca;--accent-2:#54e5a2;--orange:#ffb86b;--blue:#80c8ff;--danger:#ff8585;--shadow:0 24px 80px rgba(0,0,0,.4)}
-        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif}button,input,textarea,select{font:inherit}
-        .community-shell{min-height:100vh;position:relative;overflow-x:hidden}.topbar{height:72px;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--line);background:rgba(5,14,13,.9);backdrop-filter:blur(24px)}
-        .brand{display:flex;align-items:center;gap:12px;background:none;border:0;color:inherit;cursor:pointer}.brand-mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#06120d;background:var(--accent);font-weight:900}.brand-copy{text-align:left}.brand-title{font-size:14px;font-weight:800}.brand-path{color:var(--muted);font-size:11px}.top-actions{display:flex;align-items:center;gap:10px}.profile-mini{display:flex;align-items:center;gap:10px;padding:4px 8px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(141,255,202,.22);color:var(--accent);font-weight:800;font-size:12px}.profile-name{font-size:12px;font-weight:700}.profile-level{color:var(--muted);font-size:10px}
-        .layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 72px)}.sidebar{border-right:1px solid var(--line);padding:22px 14px;background:rgba(4,11,10,.65);position:sticky;top:72px;height:calc(100vh - 72px);overflow-y:auto}.terminal-label{color:var(--muted);font-size:10px;text-transform:uppercase;padding:0 12px 12px;letter-spacing:.08em}.nav{display:grid;gap:6px}.nav-item{width:100%;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:12px;text-align:left;cursor:pointer;transition:all .2s ease}.nav-item:hover{background:rgba(141,255,202,.05);color:var(--text)}.nav-item.active{background:rgba(141,255,202,.12);color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);font-weight:700}.nav-label{flex:1;font-size:12px}.nav-icon{width:22px;text-align:center;font-size:14px}
-        
-        .sidebar-terminal{margin-top:28px;padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.4)}
-        .sidebar-terminal-title{color:var(--accent);font-size:10px;font-weight:700;margin-bottom:8px}
-        .terminal-logs{max-height:110px;overflow-y:auto;font-family:monospace;font-size:9.5px;color:var(--muted);line-height:1.5;margin-bottom:8px}
-        .terminal-log-line{word-break:break-all}
-        .terminal-form{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:8px}
-        .term-prompt{color:var(--accent);font-size:11px;font-weight:900}
-        .term-input{background:transparent;border:0;color:var(--text);font-size:10px;outline:none;font-family:monospace;width:100%}
+        <button
+          type="button"
+          className="icon-button"
+          onClick={closeAuthModal}
+          disabled={busy}
+          style={{
+            width: '28px',
+            height: '28px',
+            fontSize: '14px',
+          }}
+        >
+          ×
+        </button>
+      </div>
 
-        .radar-empty-state{position:relative;border:1px solid var(--line);border-radius:18px;background:rgba(8,20,18,.9);padding:30px;text-align:center;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.3)}
-        .radar-sweep-effect{position:absolute;inset:0;background:radial-gradient(circle at center,rgba(141,255,202,.08) 0%,transparent 70%);animation:radarPulse 3s infinite ease-in-out;pointer-events:none}
-        @keyframes radarPulse{0%{transform:scale(0.8);opacity:0.4}50%{transform:scale(1.2);opacity:0.8}100%{transform:scale(0.8);opacity:0.4}}
-        .radar-content{position:relative;z-index:2}
-        .radar-tag{font-size:9px;color:var(--accent);font-weight:800;letter-spacing:.15em;margin-bottom:8px}
-        .radar-content h4{margin:6px 0;font-size:16px;color:var(--text)}
-        .radar-content p{font-size:11px;color:var(--muted);margin-bottom:16px}
+      {/* Auth Content */}
+      <div
+        style={{
+          padding: '24px',
+          fontFamily: 'monospace',
+        }}
+      >
+        <div
+          style={{
+            color: 'var(--accent)',
+            fontSize: '11px',
+            marginBottom: '8px',
+          }}
+        >
+          &gt; auth.session()
+        </div>
 
-        .classified-box{border:1px solid var(--line);border-radius:16px;background:rgba(15,28,26,.85);padding:22px;text-align:center}
-        .classified-header{font-size:9px;color:var(--orange);font-weight:800;letter-spacing:.15em;margin-bottom:8px}
-        .classified-box p{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+        <h2
+          style={{
+            margin: '0 0 16px',
+            fontSize: '20px',
+            color: 'var(--text)',
+            fontFamily: 'Inter',
+          }}
+        >
+          University Identity Terminal
+        </h2>
 
-        .readiness-meter-box{margin-top:20px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.35)}
-        .meter-header{display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--accent);font-weight:800;letter-spacing:.1em;margin-bottom:8px}
-        .pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:blink 1.5s infinite}
-        @keyframes blink{0%{opacity:1}50%{opacity:0.3}100%{opacity:1}}
-        .progress-bar-track{width:100%;height:6px;border-radius:99px;background:rgba(255,255,255,.05);overflow:hidden;margin-bottom:8px}
-        .progress-bar-fill{width:100%;height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));box-shadow:0 0 10px rgba(141,255,202,.5)}
-        .ticker-text{font-size:10px;color:var(--muted);font-family:monospace}
+        {/* STEP 1 */}
+        {authStep === 1 && (
+          <div>
+            <p
+              style={{
+                color: 'var(--muted)',
+                fontSize: '12px',
+                marginBottom: '20px',
+                fontFamily: 'Inter',
+              }}
+            >
+              Select your access role to proceed:
+            </p>
 
-        .main{min-width:0;padding:36px;max-width:1600px;width:100%;margin:0 auto}.hero{position:relative;min-height:340px;border:1px solid var(--line);border-radius:24px;padding:36px;background:linear-gradient(135deg,rgba(12,28,26,.85),rgba(6,16,15,.95));overflow:hidden;box-shadow:var(--shadow)}.hero-kicker,.section-kicker{color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-weight:700}.hero h1{font-size:42px;margin:0;letter-spacing:-.02em}.hero h1 span{color:var(--accent)}.hero-copy{color:var(--soft);font-size:14px;line-height:1.7;max-width:700px;margin-top:12px}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.terminal-orb{position:absolute;width:320px;height:320px;border-radius:50%;right:-80px;top:-100px;border:1px solid rgba(141,255,202,.12);background:radial-gradient(circle,rgba(141,255,202,.05) 0%,transparent 70%)}
-        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}.stat-card{border:1px solid var(--line);border-radius:18px;padding:22px;background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.2)}.stat-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.stat-value{margin-top:10px;font-size:28px;font-weight:900;color:var(--text)}.stat-extra{color:var(--accent);font-size:10px;margin-top:6px;font-weight:600}.two-column{display:grid;grid-template-columns:1fr 1fr;gap:20px}.section-spacer{margin-top:28px}
-        .panel{border:1px solid var(--line);border-radius:20px;background:var(--panel);overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,.25)}.panel-header{padding:22px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}.panel-title{margin:0;font-size:15px;font-weight:750}.panel-subtitle{color:var(--muted);font-size:10px;margin-top:4px}.panel-body{padding:22px}.section-heading{margin-bottom:24px}.section-heading h2{margin:0;font-size:30px;font-weight:800;letter-spacing:-.02em}.section-heading p{color:var(--muted);font-size:12px;margin-top:6px}
-        .toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.filter-row{display:flex;gap:8px;overflow-x:auto}.filter{height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;transition:all .2s}.filter:hover{border-color:var(--accent);color:var(--text)}.filter.active{color:#06120d;background:var(--accent);border-color:var(--accent)}
-        .search-input{width:100%;height:44px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.03);color:var(--text);padding:0 16px;font-size:12px;outline:none;transition:border-color .2s}.toolbar>.search-input{max-width:380px}.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,255,202,.1)}textarea.search-input{height:auto;resize:vertical}.field-label{display:block;margin:18px 0 8px;color:var(--muted);font-size:10px;letter-spacing:.1em;font-weight:700}.file-input{color:var(--muted)}
-        .resource-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.resource-card{border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .2s,border-color .2s}.resource-card:hover{transform:translateY(-3px);border-color:var(--line-strong)}.card-top,.card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px}.card-icon{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;font-size:22px;border:1px solid var(--line);background:rgba(141,255,202,.05)}.challenge-type{color:var(--muted);font-size:10px;text-transform:uppercase;margin-top:14px;letter-spacing:.08em;font-weight:700}.card-title{font-size:16px;margin:12px 0 8px;font-weight:800}.card-description{color:var(--muted);font-size:11px;line-height:1.7;min-height:54px}.project-author{color:var(--accent);font-size:10px;margin-top:12px;font-weight:600}.date-box{margin:14px 0;padding:12px;border-left:3px solid var(--accent);color:var(--soft);font-size:10px;line-height:1.7;background:rgba(141,255,202,.03);border-radius:0 10px 10px 0}.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.project-stats{color:var(--muted);font-size:10px}
-        
-        .squad-card{background:linear-gradient(135deg,rgba(15,32,30,.9),rgba(8,18,17,.95))}
-        .squad-members-box{margin-top:16px;padding:12px;border-radius:12px;background:rgba(0,0,0,.3);border:1px solid var(--line)}
-        .squad-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px}
-        .squad-list{font-size:11px;color:var(--accent);font-weight:600}
-        
-        .project-box{border-top:3px solid var(--blue)}
-        .tech-stack-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
-        .tech-tag{font-size:9px;padding:4px 10px;border-radius:6px;background:rgba(128,200,255,.08);color:var(--blue);font-weight:700}
-        
-        .idea-card{border-top:3px solid var(--orange)}
-        .idea-author{margin-top:16px;font-size:10px;color:var(--muted)}
-        .idea-author span{color:var(--orange);font-weight:700}
+            <div
+              style={{
+                display: 'grid',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn"
+                style={{
+                  justifyContent: 'flex-start',
+                  fontFamily: 'Inter',
+                }}
+                onClick={() => selectAuthRole('student')}
+              >
+                ⚡ STUDENT WORKSPACE
+              </button>
+            </div>
+          </div>
+        )}
 
-        .matrix-panel{border:1px solid var(--line);border-radius:20px;background:var(--panel);overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,.25)}
-        .matrix-row{display:grid;grid-template-columns:60px 1fr auto;gap:16px;align-items:center;padding:18px 24px;border-top:1px solid var(--line);transition:background .2s}
-        .matrix-row:first-child{border-top:0}
-        .matrix-row:hover{background:rgba(141,255,202,.03)}
-        .matrix-rank{font-size:16px;font-weight:900;color:var(--muted)}
-        .matrix-user-info strong{display:block;font-size:14px;color:var(--text)}
-        .matrix-user-info span{font-size:11px;color:var(--muted);margin-top:2px;display:block}
-        .rank-gold{background:rgba(255,215,0,.04);border-left:4px solid #ffd700}.rank-gold .matrix-rank{color:#ffd700}
-        .rank-silver{background:rgba(192,192,192,.04);border-left:4px solid #c0c0c0}.rank-silver .matrix-rank{color:#c0c0c0}
-        .rank-bronze{background:rgba(205,127,50,.04);border-left:4px solid #cd7f32}.rank-bronze .matrix-rank{color:#cd7f32}
+        {/* STEP 2 */}
+        {authStep === 2 && (
+          <div>
+            <p
+              style={{
+                color: 'var(--muted)',
+                fontSize: '12px',
+                marginBottom: '16px',
+                fontFamily: 'Inter',
+              }}
+            >
+              Enter your university credentials to receive a
+              verification code.
+            </p>
 
-        .event-card{border-top:3px solid var(--accent)}
-        .event-badge{font-size:9px;padding:4px 8px;border-radius:6px;background:rgba(141,255,202,.1);color:var(--accent);font-weight:800}
-        .event-details-box{margin-top:16px;display:grid;gap:6px;font-size:11px;color:var(--soft)}
+            <label
+              className="field-label"
+              style={{ fontFamily: 'Inter' }}
+            >
+              UNIVERSITY EMAIL
+            </label>
 
-        .resource-file-card{border-top:3px solid var(--soft)}
-        .file-ext{font-size:9px;padding:4px 8px;border-radius:6px;background:rgba(183,204,198,.1);color:var(--soft);font-weight:800}
+            <input
+              className="search-input"
+              type="email"
+              value={utbEmail}
+              onChange={(e) => setUtbEmail(e.target.value)}
+              placeholder="student@utb.edu.bh"
+              style={{
+                fontFamily: 'Inter',
+                marginBottom: '12px',
+              }}
+            />
 
-        .btn{min-height:44px;border-radius:13px;padding:0 20px;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--soft);font-size:12px;font-weight:750;cursor:pointer;transition:all .2s}.btn:hover{background:rgba(141,255,202,.08);color:var(--accent);border-color:var(--line-strong)}.btn-primary{background:var(--accent);color:#06120d;border-color:var(--accent)}.btn-danger-outline{border-color:rgba(255,133,133,.3);color:var(--danger)}.btn-danger-outline:hover{background:rgba(255,133,133,.1);color:var(--danger);border-color:var(--danger)}
-        .task-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:16px 0;border-top:1px solid var(--line)}.task-row:first-child{border-top:0}.task-meta{color:var(--muted);font-size:10px;margin-top:4px}
-        .pill{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);font-size:10px;font-weight:750}.pill-green{color:var(--accent);background:rgba(141,255,202,.08)}.pill-orange{color:var(--orange);background:rgba(255,184,107,.08)}.pill-blue{color:var(--blue);background:rgba(128,200,255,.08)}.pill-red{color:var(--danger);background:rgba(255,133,133,.08)}
-        .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:200;border:1px solid var(--line-strong);border-radius:14px;background:rgba(6,17,15,.96);color:var(--soft);padding:12px 20px;font-size:12px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-        
-        .modal-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.78);backdrop-filter:blur(12px)}
-        .terminal-modal-card{width:min(760px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(141,255,202,.3);border-radius:22px;background:linear-gradient(180deg,rgba(8,20,18,.99),rgba(4,11,10,.99));box-shadow:0 35px 120px rgba(0,0,0,.6),0 0 70px rgba(141,255,202,.08)}
-        
-        .modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.icon-button{width:36px|;height:36px;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--soft);border-radius:10px;cursor:pointer;display:grid;place-items:center}.link-button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:10px;font-weight:700}
-        @media(max-width:1200px){.resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two-column{grid-template-columns:1fr}}@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:fixed;z-index:60;left:0;top:72px;width:270px;transform:translateX(-105%)}.sidebar.open{transform:translateX(0)}.main{padding:20px}.stats-grid{grid-template-columns:repeat(2,1fr)}.profile-mini{display:none}}@media(max-width:640px){.topbar{padding:0 13px;height:64px}.sidebar{top:64px;height:calc(100vh - 64px)}.main{padding:14px;padding-bottom:80px}.hero{padding:21px}.hero h1{font-size:38px}.stats-grid,.resource-grid{grid-template-columns:1fr}.toolbar>.search-input{max-width:none}.modal-actions{flex-direction:column}.modal-actions .btn{width:100%}}
-      `}</style>
-    </main>
-  );
+            <label
+              className="field-label"
+              style={{ fontFamily: 'Inter' }}
+            >
+              STUDENT ID
+            </label>
+
+            <input
+              className="search-input"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              placeholder="e.g. 20260000"
+              style={{
+                fontFamily: 'Inter',
+                marginBottom: '16px',
+              }}
+            />
+
+            {otpError && (
+              <div
+                style={{
+                  color: 'var(--danger)',
+                  fontSize: '11px',
+                  marginBottom: '12px',
+                }}
+              >
+                {otpError}
+              </div>
+            )}
+
+            <div
+              className="modal-actions"
+              style={{ fontFamily: 'Inter' }}
+            >
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busy}
+                onClick={requestOtp}
+              >
+                {busy ? 'SENDING...' : 'SEND OTP CODE →'}
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setAuthStep(1)}
+              >
+                BACK
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3 */}
+        {authStep === 3 && (
+          <div>
+            <p
+              style={{
+                color: 'var(--muted)',
+                fontSize: '12px',
+                marginBottom: '16px',
+                fontFamily: 'Inter',
+              }}
+            >
+              Enter the 6-digit verification code sent to{' '}
+              <strong>{utbEmail}</strong>.
+            </p>
+
+            {otpMessage && (
+              <div
+                style={{
+                  color: 'var(--accent)',
+                  fontSize: '11px',
+                  marginBottom: '12px',
+                }}
+              >
+                {otpMessage}
+              </div>
+            )}
+
+            <label
+              className="field-label"
+              style={{ fontFamily: 'Inter' }}
+            >
+              6-DIGIT CODE
+            </label>
+
+            <input
+              className="search-input"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              placeholder="______"
+              style={{
+                textAlign: 'center',
+                letterSpacing: '6px',
+                fontSize: '18px',
+                fontFamily: 'monospace',
+                marginBottom: '16px',
+              }}
+            />
+
+            {otpError && (
+              <div
+                style={{
+                  color: 'var(--danger)',
+                  fontSize: '11px',
+                  marginBottom: '12px',
+                }}
+              >
+                {otpError}
+              </div>
+            )}
+
+            <div
+              className="modal-actions"
+              style={{ fontFamily: 'Inter' }}
+            >
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busy || otpCode.length !== 6}
+                onClick={verifyOtp}
+              >
+                {busy ? 'VERIFYING...' : 'VERIFY & SIGN IN'}
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setAuthStep(2)}
+              >
+                CHANGE EMAIL
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </article>
+  </div>
+)}
+
+{/* =========================================================
+    GLOBAL STYLES
+========================================================= */}
+
+<style jsx global>{`
+  :root {
+    --bg: #050d0c;
+    --panel: rgba(12, 25, 24, 0.88);
+    --line: rgba(147, 255, 202, 0.15);
+    --line-strong: rgba(147, 255, 202, 0.3);
+    --text: #eefdf7;
+    --muted: #8ca9a1;
+    --soft: #b7ccc6;
+    --accent: #8dffca;
+    --accent-2: #54e5a2;
+    --orange: #ffb86b;
+    --blue: #80c8ff;
+    --danger: #ff8585;
+    --shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  /* ... باقي CSS الخاص بك كما هو ... */
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--soft);
+    border-radius: 10px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+
+  .link-button {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 1200px) {
+    .resource-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .two-column {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      position: fixed;
+      z-index: 60;
+      left: 0;
+      top: 72px;
+      width: 270px;
+      transform: translateX(-105%);
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .main {
+      padding: 20px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .profile-mini {
+      display: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .topbar {
+      padding: 0 13px;
+      height: 64px;
+    }
+
+    .sidebar {
+      top: 64px;
+      height: calc(100vh - 64px);
+    }
+
+    .main {
+      padding: 14px;
+      padding-bottom: 80px;
+    }
+
+    .hero {
+      padding: 21px;
+    }
+
+    .hero h1 {
+      font-size: 38px;
+    }
+
+    .stats-grid,
+    .resource-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .toolbar > .search-input {
+      max-width: none;
+    }
+
+    .modal-actions {
+      flex-direction: column;
+    }
+
+    .modal-actions .btn {
+      width: 100%;
+    }
+  }
+`}</style>
+
+</main>
+);
 }

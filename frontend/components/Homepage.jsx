@@ -484,19 +484,22 @@ export default function Homepage() {
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [courses, setCourses] = useState([]);
   const [passedCodes, setPassedCodes] = useState(new Set());
-
+const [comingSoon, setComingSoon] = useState(null);
   // Navbar Hide/Show on Scroll logic
-  const [hidden, setHidden] = useState(false);
-  const { scrollY } = useFramerScroll();
+// Navbar Hide/Show on Scroll logic
+const [hidden, setHidden] = useState(false);
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious();
-    if (latest > previous && latest > 150) {
-      setHidden(true);
-    } else {
-      setHidden(false);
-    }
-  });
+const { scrollY } = useScroll();
+
+useMotionValueEvent(scrollY, "change", (latest) => {
+  const previous = scrollY.getPrevious();
+
+  if (latest > previous && latest > 150) {
+    setHidden(true);
+  } else {
+    setHidden(false);
+  }
+});
 
   useEffect(() => {
     const normalized = fallbackCourses.map((c) => ({
@@ -1126,13 +1129,11 @@ export default function Homepage() {
 
       {/* ---------- Clubs & Academies Hub (مع id للربط) ---------- */}
 
-      {}
-<section
+  <section
   id="clubs-section"
   ref={clubsSectionRef}
   className="border-t border-white/[0.08] px-[5%] py-32 bg-[#050b18] relative overflow-hidden"
 >
-
   <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
     <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-sky-400">
       Student Communities
@@ -1143,245 +1144,472 @@ export default function Homepage() {
     </h2>
   </div>
 
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 max-w-6xl mx-auto items-stretch">
 
+    {/* =====================================================
+        CARD 1 — IoT CLUB
+    ====================================================== */}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 max-w-6xl mx-auto items-stretch">
+    <motion.div
+      style={{
+        x: card1X,
+        scale: cardsScale,
+        opacity: cardsOpacityScroll,
+      }}
+      whileHover={{
+        y: -8,
+        rotate: -1,
+      }}
+      className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-emerald-400/50 group-hover:shadow-[0_0_30px_rgba(33,230,160,0.15)] z-10"
+    >
+      <div>
+        <div className="flex items-center justify-between mb-8">
+          <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
+            01
+          </span>
 
-          {/* Card 1: IoT Club */}
-
-          <motion.div
-            style={{
-              x: card1X,
-              scale: cardsScale,
-              opacity: cardsOpacityScroll,
-            }}
-            whileHover={{
-              y: -8,
-              rotate: -1,
-            }}
-            className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-emerald-400/50 group-hover:shadow-[0_0_30px_rgba(33,230,160,0.15)] z-10"
-          >
-
-            <div>
-
-              <div className="flex items-center justify-between mb-8">
-
-                <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
-                  01
-                </span>
-
-                <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-emerald-400">
-                  IoT
-                </span>
-
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
-                IoT Club
-              </h3>
-
-              <p className="text-sm leading-relaxed text-slate-400 mb-8">
-                Connect, build, and innovate with the Internet of Things. Build connected devices and smart systems from Arduino to cloud integration.
-              </p>
-
-            </div>
-
-            <Link
-              href="#"
-              className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06]"
-            >
-              <span>Explore Hub</span>
-              <span className="transform group-hover:translate-x-1 transition-transform">
-                →
-              </span>
-            </Link>
-
-          </motion.div>
-
-
-          {/* Card 2: Huawei Academy */}
-
-          <motion.div
-            style={{
-              scale: cardsScale,
-              opacity: cardsOpacityScroll,
-            }}
-            whileHover={{
-              y: -8,
-            }}
-            className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-red-400/50 group-hover:shadow-[0_0_30px_rgba(239,68,68,0.15)] z-20"
-          >
-
-            <div>
-
-              <div className="flex items-center justify-between mb-8">
-
-                <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
-                  02
-                </span>
-
-                <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-red-400">
-                  Huawei
-                </span>
-
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
-                Huawei Academy
-              </h3>
-
-              <p className="text-sm leading-relaxed text-slate-400 mb-8">
-                Official Huawei ICT Academy. Globally recognized ICT certifications at UTB covering HCIA and HCIP in networking, cloud, and AI.
-              </p>
-
-            </div>
-
-            <Link
-              href="/huawei"
-              className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06]"
-            >
-              <span>Explore Hub</span>
-
-              <span className="transform group-hover:translate-x-1 transition-transform">
-                →
-              </span>
-            </Link>
-
-          </motion.div>
-
-
-          {/* Card 3: Cisco Academy */}
-
-          <motion.div
-            style={{
-              x: card3X,
-              scale: cardsScale,
-              opacity: cardsOpacityScroll,
-            }}
-            whileHover={{
-              y: -8,
-              rotate: 1,
-            }}
-            className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-sky-400/50 group-hover:shadow-[0_0_30px_rgba(54,163,255,0.15)] z-10"
-          >
-
-            <div>
-
-              <div className="flex items-center justify-between mb-8">
-
-                <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
-                  03
-                </span>
-
-                <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-sky-400">
-                  Cisco
-                </span>
-
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
-                Cisco Academy
-              </h3>
-
-              <p className="text-sm leading-relaxed text-slate-400 mb-8">
-                Official Cisco Networking Academy. World-class networking and cybersecurity education including CCNA, CyberOps, and DevNet.
-              </p>
-
-            </div>
-
-            <Link
-              href="#"
-              className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06]"
-            >
-              <span>Explore Hub</span>
-
-              <span className="transform group-hover:translate-x-1 transition-transform">
-                →
-              </span>
-            </Link>
-
-          </motion.div>
-
+          <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-emerald-400">
+            IoT
+          </span>
         </div>
 
-      </section>
+        <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
+          IoT Club
+        </h3>
 
+        <p className="text-sm leading-relaxed text-slate-400 mb-8">
+          Connect, build, and innovate with the Internet of Things.
+          Build connected devices and smart systems from Arduino to
+          cloud integration.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setComingSoon('iot')}
+        className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06] w-full text-left"
+      >
+        <span>Explore Hub</span>
+
+        <span className="transform group-hover:translate-x-1 transition-transform">
+          →
+        </span>
+      </button>
+    </motion.div>
+
+
+    {/* =====================================================
+        CARD 2 — HUAWEI ACADEMY
+    ====================================================== */}
+
+    <motion.div
+      style={{
+        scale: cardsScale,
+        opacity: cardsOpacityScroll,
+      }}
+      whileHover={{
+        y: -8,
+      }}
+      className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-red-400/50 group-hover:shadow-[0_0_30px_rgba(239,68,68,0.15)] z-20"
+    >
+      <div>
+        <div className="flex items-center justify-between mb-8">
+          <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
+            02
+          </span>
+
+          <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-red-400">
+            Huawei
+          </span>
+        </div>
+
+        <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
+          Huawei Academy
+        </h3>
+
+        <p className="text-sm leading-relaxed text-slate-400 mb-8">
+          Official Huawei ICT Academy. Globally recognized ICT
+          certifications at UTB covering HCIA and HCIP in networking,
+          cloud, and AI.
+        </p>
+      </div>
+
+      <Link
+        href="/huawei"
+        className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06]"
+      >
+        <span>Explore Hub</span>
+
+        <span className="transform group-hover:translate-x-1 transition-transform">
+          →
+        </span>
+      </Link>
+    </motion.div>
+
+
+    {/* =====================================================
+        CARD 3 — CISCO ACADEMY
+    ====================================================== */}
+
+    <motion.div
+      style={{
+        x: card3X,
+        scale: cardsScale,
+        opacity: cardsOpacityScroll,
+      }}
+      whileHover={{
+        y: -8,
+        rotate: 1,
+      }}
+      className="group relative rounded-[2rem] border border-white/[0.08] bg-[#091224] p-8 flex flex-col justify-between transition-all duration-300 hover:border-sky-400/50 group-hover:shadow-[0_0_30px_rgba(54,163,255,0.15)] z-10"
+    >
+      <div>
+        <div className="flex items-center justify-between mb-8">
+          <span className="text-4xl font-mono font-bold text-white/20 group-hover:text-white/40 transition-colors">
+            03
+          </span>
+
+          <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-sky-400">
+            Cisco
+          </span>
+        </div>
+
+        <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-300 transition-colors">
+          Cisco Academy
+        </h3>
+
+        <p className="text-sm leading-relaxed text-slate-400 mb-8">
+          Official Cisco Networking Academy. World-class networking
+          and cybersecurity education including CCNA, CyberOps, and
+          DevNet.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setComingSoon('cisco')}
+        className="inline-flex items-center gap-2 font-mono text-xs font-semibold text-slate-300 group-hover:text-white transition-colors pt-4 border-t border-white/[0.06] w-full text-left"
+      >
+        <span>Explore Hub</span>
+
+        <span className="transform group-hover:translate-x-1 transition-transform">
+          →
+        </span>
+      </button>
+    </motion.div>
+
+  </div>
+
+
+  {/* =====================================================
+      COMING SOON MODAL
+  ====================================================== */}
+
+  {comingSoon && (
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md"
+      onClick={() => setComingSoon(null)}
+    >
+      <motion.div
+        initial={{
+          opacity: 0,
+          scale: 0.92,
+          y: 20,
+        }}
+        animate={{
+          opacity: 1,
+          scale: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.25,
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-[2rem] border border-cyan-400/20 bg-[#08111f] p-8 text-center shadow-[0_0_80px_rgba(34,211,238,0.12)]"
+      >
+
+        {/* Close */}
+
+        <button
+          type="button"
+          onClick={() => setComingSoon(null)}
+          className="absolute right-5 top-5 text-slate-500 transition hover:text-white"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+
+
+        {/* Icon */}
+
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] text-3xl">
+          🚀
+        </div>
+
+
+        {/* Label */}
+
+        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-300">
+          Something is coming
+        </p>
+
+
+        {/* Title */}
+
+        <h3 className="text-2xl font-bold text-white">
+          {comingSoon === 'iot'
+            ? 'IoT Learning Hub'
+            : 'Cisco Learning Hub'}
+        </h3>
+
+
+        {/* Description */}
+
+        <p className="mx-auto mt-4 max-w-sm text-sm leading-7 text-slate-400">
+          {comingSoon === 'iot'
+            ? 'We are preparing new IoT courses, hands-on projects, and learning opportunities for UTB students.'
+            : 'We are preparing new Cisco networking and cybersecurity courses, certifications, and hands-on labs for UTB students.'}
+        </p>
+
+
+        {/* Status */}
+
+        <div className="mt-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4">
+          <div className="font-mono text-xs text-cyan-300">
+            IN DEVELOPMENT
+          </div>
+
+          <div className="mt-2 text-xs text-slate-500">
+            New courses & opportunities are on the way.
+          </div>
+        </div>
+
+
+        {/* Close Button */}
+
+        <button
+          type="button"
+          onClick={() => setComingSoon(null)}
+          className="mt-6 w-full rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-5 py-3 font-mono text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
+        >
+          GOT IT →
+        </button>
+
+      </motion.div>
+    </div>
+  )}
+
+</section>
 
 {/* ---------- Student Achievements ---------- */}
-      <section
-        id="career-section"
-        ref={careerSectionRef}
-        className="relative overflow-hidden border-t border-white/[0.08] bg-[#050b18] px-4 py-24 sm:px-[5%] sm:py-28"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-300">
-              Student Achievements
-            </p>
-            <h2 className="text-4xl font-bold tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
-              Student Spotlight
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-              A snapshot of academic excellence, technical impact, certifications, and student leadership.
-            </p>
+<section
+  id="career-section"
+  ref={careerSectionRef}
+  className="relative overflow-hidden border-t border-white/[0.08] bg-[#050b18] px-4 py-24 sm:px-[5%] sm:py-28"
+>
+  <div className="mx-auto max-w-7xl">
+
+    {/* Section Header */}
+    <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
+
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-300">
+        Student Achievements
+      </p>
+
+      <h2 className="text-4xl font-bold tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+        Student Spotlight
+      </h2>
+
+      <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+        Your projects, achievements, certifications, and impact could be
+        featured here.
+      </p>
+    </div>
+
+    {/* Achievement Cards */}
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 md:grid-cols-3">
+
+      {[
+        {
+          name: 'Academic Excellence',
+          role: 'ACADEMIC',
+          type: 'Achievement',
+          image: null,
+          value: '3.92+',
+          progress: 100,
+          description:
+            'Recognizing students who demonstrate outstanding academic performance.',
+          color: 'sky',
+          achievements: [
+            'Academic Excellence',
+            'Outstanding Performance',
+            'Top Academic Achievement',
+          ],
+          active: true,
+        },
+
+        {
+          name: 'Project Excellence',
+          role: 'TECHNICAL',
+          type: 'Achievement',
+          image: null,
+          value: '3+',
+          progress: 0,
+          description:
+            'Build meaningful software, AI, networking, or engineering projects worthy of the spotlight.',
+          color: 'violet',
+          achievements: [
+            'Build Projects',
+            'Technical Impact',
+            'Innovation',
+          ],
+          active: false,
+          requirement: 'Complete featured projects',
+        },
+
+        {
+          name: 'Leadership & Innovation',
+          role: 'LEADERSHIP',
+          type: 'Achievement',
+          image: null,
+          value: '01+',
+          progress: 0,
+          description:
+            'Lead initiatives, represent your community, and turn ideas into meaningful impact.',
+          color: 'emerald',
+          achievements: [
+            'Student Leadership',
+            'Community Impact',
+            'Innovation',
+          ],
+          active: false,
+          requirement: 'Create meaningful impact',
+        },
+      ].map((student) => (
+        <div
+          key={student.name}
+          className="relative overflow-hidden rounded-3xl"
+        >
+
+          {/* LOCKED CARD */}
+          {!student.active && (
+            <div
+              className="absolute inset-0 z-30 flex items-center justify-center rounded-3xl"
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(5,11,24,0.78), rgba(5,11,24,0.96))',
+                backdropFilter: 'blur(7px)',
+                WebkitBackdropFilter: 'blur(7px)',
+              }}
+            >
+              <div className="w-full px-6 text-center">
+
+                {/* Lock */}
+                <div
+                  className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    boxShadow:
+                      '0 0 35px rgba(34,211,238,0.08)',
+                  }}
+                >
+                  <span className="text-xl">🔒</span>
+                </div>
+
+                {/* Earn your spot */}
+                <div className="font-mono text-[9px] font-bold uppercase tracking-[0.28em] text-cyan-300">
+                  Earn Your Spot
+                </div>
+
+                {/* Card title */}
+                <h3 className="mt-2 text-sm font-bold text-white">
+                  {student.name}
+                </h3>
+
+                {/* Description */}
+                <p className="mx-auto mt-3 max-w-[230px] text-[11px] leading-5 text-slate-500">
+                  {student.description}
+                </p>
+
+                {/* Requirement */}
+                <div className="mx-auto mt-5 max-w-[230px]">
+
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-mono text-[8px] uppercase tracking-[0.15em] text-slate-600">
+                      Progress
+                    </span>
+
+                    <span className="font-mono text-[8px] text-cyan-300">
+                      0%
+                    </span>
+                  </div>
+
+                  <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-cyan-300"
+                      style={{ width: '0%' }}
+                    />
+                  </div>
+
+                  <p className="mt-3 font-mono text-[8px] uppercase tracking-[0.12em] text-slate-600">
+                    {student.requirement}
+                  </p>
+
+                </div>
+
+                {/* Status */}
+                <div className="mt-5 flex items-center justify-center gap-2">
+
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      background: '#67e8f9',
+                      boxShadow: '0 0 8px #67e8f9',
+                    }}
+                  />
+
+                  <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
+                    Locked
+                  </span>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* CARD CONTENT */}
+          <div
+            className={
+              !student.active
+                ? 'pointer-events-none opacity-75'
+                : ''
+            }
+          >
+            <StudentAchievementCard student={student} />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                name: 'Ahmed Ali',
-                role: 'Academic Excellence',
-                type: 'Academic',
-                image: '/student-1.jpg',
-                value: '3.92',
-                progress: 98,
-                description: 'Highest academic performance in Informatics Engineering.',
-                color: 'sky',
-                achievements: ['Highest GPA', 'Academic Excellence Award', 'Outstanding Student'],
-              },
-              {
-                name: 'Sara Mohammed',
-                role: 'Project Excellence',
-                type: 'Technical',
-                image: '/student-2.jpg',
-                value: '12',
-                progress: 91,
-                description: 'Outstanding contribution through software and AI projects.',
-                color: 'violet',
-                achievements: ['12 Projects', 'AI Research Project', 'Innovation Award'],
-              },
-              {
-                name: 'Omar Hassan',
-                role: 'Huawei Student Ambassador',
-                type: 'Leadership',
-                image: '/student-3.jpg',
-                value: 'HCIA',
-                progress: 87,
-                description: 'Active student ambassador representing Huawei ICT Academy.',
-                color: 'red',
-                achievements: ['Huawei Ambassador', 'HCIA Certified', 'ICT Academy Leader'],
-              },
-              {
-                name: 'Mariam Khalid',
-                role: 'IoT Student Ambassador',
-                type: 'Innovation',
-                image: '/student-4.jpg',
-                value: '8',
-                progress: 84,
-                description: 'Leading student initiatives and projects in IoT technologies.',
-                color: 'emerald',
-                achievements: ['IoT Ambassador', '8 IoT Projects', 'Innovation Team'],
-              },
-            ].map((student) => (
-              <StudentAchievementCard key={student.name} student={student} />
-            ))}
-          </div>
-
-          <p className="mt-6 text-center text-[9px] font-mono uppercase tracking-[0.18em] text-slate-600">
-            Desktop: hover a student · Mobile: tap a student
-          </p>
         </div>
-      </section>
+      ))}
+
+    </div>
+
+    {/* Motivation */}
+    <div className="mx-auto mt-12 max-w-2xl text-center">
+
+      <h3 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+        Your name could be next.
+      </h3>
+
+      <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-slate-600">
+        Build • Learn • Create • Lead
+      </p>
+
+    </div>
+
+  </div>
+</section>
 
       {/* ---------- Activity Gallery / Event (مع id للربط) ---------- */}
 

@@ -1,90 +1,164 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
-const { requireAuth } = require('../middleware/auth');
+const Student = require('../models/Student');
+const { sendOtpEmail } = require('../utils/brevoMailer');
+const { issueCode, verifyCode } = require('../utils/otpStore');
 
 const router = express.Router();
 
-function signToken(user) {
-  return jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+function signToken(student) {
+  return jwt.sign(
+    {
+      sub: student._id || student.id,
+      email: student.email,
+      role: student.role || 'student',
+      studentId: student.studentId
+    },
+    process.env.JWT_SECRET || 'fallback_secret',
+    { expiresIn: '7d' }
+  );
+}
+
+// ==========================================
+// 1. Request OTP
+// ==========================================
+async function handleOtpRequest(req, res) {
   try {
-    const { fullName, email, password, role, studentId, cohortYear } = req.body;
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ error: 'Full name, email, and password are required.' });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const studentId = String(req.body?.studentId || '').trim();
+    const name = req.body?.name;
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter a valid email address.'
+      });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Student ID is required.'
+      });
+    }
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({
-      fullName, email, passwordHash,
-      role: role === 'student' ? 'student' : 'student', // public signup defaults to student
-      studentId, cohortYear,
+    const otpCode = issueCode(email);
+    await sendOtpEmail(email, otpCode);
+
+    let student = await Student.findOne({ email });
+    if (!student) {
+      await Student.create({
+        email,
+        studentId,
+        name: name || email.split('@')[0],
+        role: 'student',
+        isActive: true
+      });
+    } else {
+      student.studentId = studentId;
+      await student.save();
+    }
+
+    console.log(`OTP sent successfully to ${email} (ID: ${studentId})`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Verification code sent successfully.',
+      expiresInSeconds: 600
     });
 
-    const token = signToken(user);
-    res.status(201).json({ token, user: { id: user._id, fullName: user.fullName, role: user.role } });
   } catch (err) {
-    res.status(500).json({ error: 'Could not create account.' });
+    if (err.status === 429) {
+      return res.status(429).json({ success: false, error: err.message });
+    }
+    console.error('OTP request error:', err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to send verification code.'
+    });
   }
-});
+}
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/request-otp', handleOtpRequest);
+router.post('/otp/request', handleOtpRequest);
+
+
+// ==========================================
+// 2. Verify OTP
+// ==========================================
+async function handleOtpVerify(req, res) {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email: (email || '').toLowerCase() }).select('+passwordHash');
-    if (!user) return res.status(401).json({ error: 'Incorrect email or password.' });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otpCode = String(req.body?.otpCode || req.body?.code || '').trim();
 
-    const match = await bcrypt.compare(password || '', user.passwordHash);
-    if (!match) return res.status(401).json({ error: 'Incorrect email or password.' });
+    if (!email || !otpCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and verification code are required.'
+      });
+    }
 
-    const token = signToken(user);
-    res.json({ token, user: { id: user._id, fullName: user.fullName, role: user.role } });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid email address.'
+      });
+    }
+
+    const result = verifyCode(email, otpCode);
+    if (!result.ok) {
+      return res.status(401).json({
+        success: false,
+        error: result.reason || 'Invalid or expired verification code.'
+      });
+    }
+
+    let student = await Student.findOne({ email });
+
+    if (!student) {
+      student = await Student.create({
+        email,
+        name: email.split('@')[0],
+        role: 'student',
+        isActive: true
+      });
+    }
+
+    if (student.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'This account has been disabled.'
+      });
+    }
+
+    const token = signToken(student);
+
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: student._id || student.id,
+        name: student.name,
+        email: student.email,
+        studentId: student.studentId,
+        role: student.role || 'student'
+      }
+    });
+
   } catch (err) {
-    res.status(500).json({ error: 'Login failed.' });
+    console.error('OTP verification error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Authentication failed.'
+    });
   }
-});
+}
 
-// GET /api/auth/me
-router.get('/me', requireAuth, (req, res) => {
-  const { passwordHash, ...safe } = req.user.toObject();
-  res.json({ user: safe });
-});
-// GET /api/auth/utb/outlook
-router.get('/utb/outlook', (req, res) => {
-  const { email, role, returnTo } = req.query;
+router.post('/verify-otp', handleOtpVerify);
+router.post('/otp/verify', handleOtpVerify);
 
-  if (!email) {
-    return res.status(400).send('Email is required.');
-  }
-
-  if (role === 'faculty' && !email.toLowerCase().endsWith('@utb.edu.bh')) {
-    return res.status(403).send('Faculty email must be @utb.edu.bh');
-  }
-
-  const params = new URLSearchParams({
-    client_id: process.env.MICROSOFT_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
-    response_mode: 'query',
-    scope: 'openid profile email User.Read',
-    state: JSON.stringify({
-      email,
-      role: role || 'student',
-      returnTo: returnTo || process.env.CLIENT_ORIGIN,
-    }),
-  });
-
-  const tenant = process.env.MICROSOFT_TENANT_ID;
-  res.redirect(
-    `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`
-  );
-});
 module.exports = router;

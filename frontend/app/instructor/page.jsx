@@ -368,57 +368,213 @@ async function createChallenge(event) {
           )}
 
           {tab === 'challenges' && (
-            <section className="page-section">
-              <div className="section-heading">
-                <div>
-                  <div className="section-kicker">&gt; instructor.challenges()</div>
-                  <h2>Challenge Management</h2>
-                  <p>Create, edit, publish and remove engineering challenges.</p>
-                </div>
-              </div>
+  <section className="page-section">
+    <div className="section-heading">
+      <div>
+        <div className="section-kicker">&gt; instructor.challenges()</div>
+        <h2>Challenge Management</h2>
+        <p>Create, edit, publish and remove engineering challenges.</p>
+      </div>
+    </div>
 
-              <form className="panel" onSubmit={createChallenge} style={{ padding: '24px', background: 'rgba(15, 28, 27, 0.95)', border: '1px solid rgba(141, 255, 202, 0.2)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: 'var(--accent)' }}>+ Create New Challenge</h3>
+    <form
+      className="panel"
+      onSubmit={createChallenge}
+      style={{
+        padding: '24px',
+        background: 'rgba(15, 28, 27, 0.95)',
+        border: '1px solid rgba(141, 255, 202, 0.2)',
+      }}
+    >
+      <h3
+        style={{
+          margin: '0 0 16px 0',
+          fontSize: '15px',
+          color: 'var(--accent)',
+        }}
+      >
+        + Create New Challenge
+      </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '14px' }}>
-                  <input className="search-input" placeholder="Challenge title (عنوان التحدي)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-                  <input className="search-input" placeholder="Category (التخصص / الكود)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required />
-                  <input className="search-input" placeholder="Reward XP (نقاط المكافأة)" type="number" min="0" value={form.reward} onChange={(e) => setForm({ ...form, reward: e.target.value })} />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '14px',
+          marginBottom: '14px',
+        }}
+      >
+        <input
+          className="search-input"
+          placeholder="Challenge title"
+          value={form.title}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              title: e.target.value,
+            })
+          }
+          required
+        />
 
-                  <select className="search-input custom-select" value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
-                    <option value="Beginner">Beginner (مبتدئ)</option>
-                    <option value="Intermediate">Intermediate (متوسط)</option>
-                    <option value="Advanced">Advanced (متقدم)</option>
-                  </select>
+        <input
+          className="search-input"
+          placeholder="Category / Code"
+          value={form.category}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              category: e.target.value,
+            })
+          }
+          required
+        />
 
-                  <div>
-                    <label className="field-label">START DATE (تاريخ البدء)</label>
-                    <input className="search-input" type="datetime-local" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-                  </div>
+        <input
+          className="search-input"
+          placeholder="Reward XP"
+          type="number"
+          min="0"
+          value={form.reward}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              reward: e.target.value,
+            })
+          }
+        />
 
-                  <div>
-                    <label className="field-label">DEADLINE (الموعد النهائي)</label>
-                    <input className="search-input" type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-                  </div>
+        <select
+          className="search-input custom-select"
+          value={form.difficulty}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              difficulty: e.target.value,
+            })
+          }
+        >
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+        </select>
 
-                  <input className="search-input" placeholder="Reference / Resource Link" value={form.resourceLink} onChange={(e) => setForm({ ...form, resourceLink: e.target.value })} style={{ gridColumn: '1 / -1' }} />
+        <div>
+          <label className="field-label">
+            START DATE
+          </label>
 
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label className="field-label accent-label">📎 Attachment / Document / Image</label>
-                    <input className="search-input file-input" type="file" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
-                  </div>
+          <input
+            className="search-input"
+            type="datetime-local"
+            value={form.startDate}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                startDate: e.target.value,
+              })
+            }
+          />
+        </div>
 
-                  <textarea className="search-input" style={{ minHeight: 110, gridColumn: '1 / -1', height: 'auto', padding: '12px' }} placeholder="Challenge description & instructions" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
-                </div>
+        <div>
+          <label className="field-label">
+            DEADLINE
+          </label>
 
-                <button className="btn btn-primary" disabled={busy} type="submit" style={{ width: '100%', height: '44px', fontWeight: '800' }}>
-                  {busy ? 'PUBLISHING...' : '🚀 PUBLISH CHALLENGE TO STUDENTS'}
-                </button>
-              </form>
+          <input
+            className="search-input"
+            type="datetime-local"
+            value={form.deadline}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                deadline: e.target.value,
+              })
+            }
+          />
+        </div>
 
-              <div className="toolbar section-spacer">
-                <input className="search-input" placeholder="Search published challenges..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
+        <input
+          className="search-input"
+          placeholder="Reference / Resource Link"
+          value={form.resourceLink}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              resourceLink: e.target.value,
+            })
+          }
+          style={{
+            gridColumn: '1 / -1',
+          }}
+        />
+
+        <div
+          style={{
+            gridColumn: '1 / -1',
+          }}
+        >
+          <label className="field-label accent-label">
+            📎 Attachment / Document / Image
+          </label>
+
+          <input
+            className="search-input file-input"
+            type="file"
+            onChange={(e) =>
+              setForm({
+                ...form,
+                file: e.target.files?.[0] || null,
+              })
+            }
+          />
+        </div>
+
+        <textarea
+          className="search-input"
+          style={{
+            minHeight: 110,
+            gridColumn: '1 / -1',
+            height: 'auto',
+            padding: '12px',
+          }}
+          placeholder="Challenge description & instructions"
+          value={form.description}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              description: e.target.value,
+            })
+          }
+          required
+        />
+      </div>
+
+      <button
+        className="btn btn-primary"
+        disabled={busy}
+        type="submit"
+        style={{
+          width: '100%',
+          height: '44px',
+          fontWeight: '800',
+        }}
+      >
+        {busy
+          ? 'PUBLISHING...'
+          : '🚀 PUBLISH CHALLENGE TO STUDENTS'}
+      </button>
+    </form>
+
+    <div className="toolbar section-spacer">
+      <input
+        className="search-input"
+        placeholder="Search published challenges..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </div>
 
               <div className="resource-grid section-spacer">
                 {visibleChallenges.map((item) => (
